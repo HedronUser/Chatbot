@@ -26,7 +26,7 @@ const int pwmPin11 = 11;
 
 const int sizeOfInData = 40;
 char inData[sizeOfInData];
-byte index = 0;
+byte indexer = 0;
 
 char *pwm1, *pwm2, *pwm3, *pwm4, *pwm5, *pwm6, *i;
 
@@ -46,7 +46,7 @@ void loop() {
     char aChar = Serial.read();
       if(aChar == '\n')  //this is the return character.... so all data is received from the PI... do stuff with the data
       {
-        for(int i = 0; i < index; i++){
+        for(int i = 0; i < indexer; i++){
           Serial.write(inData[i]); //writes back to the pi just so you can see it there
         }
         Serial.println();
@@ -90,13 +90,13 @@ void loop() {
             // Find the next command in input string
             command = strtok(0, "&");
           }
-        index = 0;
-        inData[index] = NULL; //empties the array
+        indexer = 0;
+        inData[indexer] = NULL; //empties the array
       }else{
-        if(index < sizeOfInData-2){  //safety to keep from overrunning the buffer
-          inData[index] = aChar;
-          index++;
-        inData[index] = '\0'; // Keep the string NULL terminated
+        if(indexer < sizeOfInData-2){  //safety to keep from overrunning the buffer
+          inData[indexer] = aChar;
+          indexer++;
+        inData[indexer] = '\0'; // Keep the string NULL terminated
       }
     }
   }
