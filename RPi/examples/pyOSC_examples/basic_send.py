@@ -25,13 +25,13 @@ client = OSC.OSCClient()
 msg = OSC.OSCMessage()
 msg.setAddress("/print")
 msg.append(1234)
-client.sendto(msg, ('127.0.0.1', 9000)) # note that the second arg is a tupple and not two arguments
+client.sendto(msg, ('192.168.0.150', 9000)) # note that the second arg is a tupple and not two arguments
 
 
 
 ## better practice ##
 client = OSC.OSCClient()
-client.connect( ('127.0.0.1', 9000) ) # note that the argument is a tupple and not two arguments
+client.connect( ('192.168.0.150', 9000) ) # note that the argument is a tupple and not two arguments
 msg = OSC.OSCMessage() #  we reuse the same variable msg used above overwriting it
 msg.setAddress("/print")
 msg.append(4321)
@@ -46,7 +46,7 @@ client.send(msg) # now we dont need to tell the client the address anymore
 
 
 # tupple with ip, port. i dont use the () but maybe you want -> send_address = ('127.0.0.1', 9000)
-send_address = '127.0.0.1', 9000
+send_address = '193.168.0.150', 9000
 
 # OSC basic client
 c = OSC.OSCClient()
