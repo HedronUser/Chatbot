@@ -166,27 +166,11 @@ void publishvalues(void){
 //is present that is below threshold value
  
  // Serial.print("Incoming Obstacle Data");
-  for (int i = 0; i < 4; i++){
-    if (i == 0){
-      Serial.print("front");
-      Serial.println();
-      }
-    if (i == 1){
-      Serial.print("left");
-      Serial.println();
-      }
-    if (i == 2){
-      Serial.print("rear");
-      Serial.println();
-      }
-    if (i == 3){
-      Serial.print("right");
-      Serial.println();
-      }
-    Serial.print(obstacledetection[i]);
-    Serial.println();
-    delay(100);
-  }
+
+      Serial.print("front = ");
+      Serial.println(obstacledetection[0]);
+      delay(1000);
+    
 }
 
 void parsearray(void){
