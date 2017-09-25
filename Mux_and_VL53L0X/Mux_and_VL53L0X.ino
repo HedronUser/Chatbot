@@ -113,7 +113,8 @@ digitalWrite(mux1en, LOW); //turn mux 1 ON
 digitalWrite(mux2en, HIGH); //turn mux 2 OFF
 }
 
-int sensorArray[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}; //holds 24 sensor values
+int sensorArray[] = {1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000}; //fake test array
+//int sensorArray[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}; //holds 24 sensor values
 
 int obstacledetection[] = {0, 0, 0, 0}; //initialize obstacle detection array to hold obstacle direction values (Front, Right, Rear, Left)  
 
@@ -122,7 +123,15 @@ void loop(){
 potval = analogRead(0); //read the value of trimpot
 Serial.print("analog 0 is: ");
 Serial.println(potval);
-// Read MUX 1
+
+//readmuxes();
+parsearray(); //processes sensor data and writes to the obstacle detection array
+publishvalues();
+  
+} 
+
+void readmuxes(void){
+  // Read MUX 1
 
 for(int k = 0; k < 16; k ++){ 
   readMux1(k);
@@ -141,19 +150,15 @@ digitalWrite(mux2en, LOW); //turn mux 2 ON
 for(int l = 0; l < 8; l ++){ 
   readMux2(l);
   Serial.print("Value at channel "); 
-  Serial.print(l); 
+  Serial.print(l + 16); 
   Serial.print("is : "); 
-  Serial.println(sensorArray[l]); 
+  Serial.println(sensorArray[l+16]); 
  }
 //Serial.print(sensorArray);
 
 digitalWrite(mux1en, LOW); //turn mux 1 ON
 digitalWrite(mux2en, HIGH); //turn mux 2 OFF
-
-parsearray(); //processes sensor data and writes to the obstacle detection array
-publishvalues();
-  
-} 
+}
   
 void publishvalues(void){
 //this should publish the values over serial that are processed from parsing function as four numbers (0, 0, 0, 0)
@@ -205,10 +210,10 @@ void parsearray(void){
   }
 
     //print the obstacle detection array to confirm it works
-   for(int n = 0; n < 4; n++){
-    Serial.print(obstacledetection[n]);
-    Serial.print(" "); 
-   }
+//   for(int n = 0; n < 4; n++){
+//    Serial.print(obstacledetection[n]);
+//    Serial.print(" "); 
+//   }
 }
 
 
