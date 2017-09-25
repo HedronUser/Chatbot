@@ -115,6 +115,9 @@ digitalWrite(mux2en, HIGH); //turn mux 2 OFF
 
 int sensorArray[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}; //holds 24 sensor values
 
+int obstacledetection[] = {0, 0, 0, 0}; //initialize obstacle detection array to hold obstacle direction values (Front, Right, Rear, Left)  
+
+
 void loop(){
 potval = analogRead(0); //read the value of trimpot
 Serial.print("analog 0 is: ");
@@ -147,6 +150,8 @@ for(int l = 0; l < 8; l ++){
 digitalWrite(mux1en, LOW); //turn mux 1 ON
 digitalWrite(mux2en, HIGH); //turn mux 2 OFF
 
+parsearray(); //processes sensor data and writes to the obstacle detection array
+
   
 } 
   
@@ -154,72 +159,52 @@ void publishvalues(void){
 //this should publish the values over serial that are processed from parsing function as four numbers (0, 0, 0, 0)
 //indexed as (Front, Left, Rear, Right) with 0 indicating no object above threshold (potval) and 1 indicating an object
 //is present that is below threshold value
+
+
 }
 
 void parsearray(void){
 //this should take the measurements from sensors designated as sensors 1-6 as front obstacle, sensors 7-12 are right obstacle, 
 //sensors 13-18 as rear obstacle and sensors 19-24 as left obstacle and compare them to threshold value from potentiometer
 // if they are less than the value then change variables front, rear, left, and right respectively to 1.
-  int obstacledetection[] = {0, 0, 0, 0}; //initialize array to hold obstacle direction values   
-  int i;
-  int front = 0; //initialize obstacle variables at 0
-  int rear = 0; 
-  int left = 0;
-  int right = 0;
   
+   //initialize array to 0 to reassign obstacle direction values
+  for(int i = 0; i < 4; i++){ 
+    obstacledetection[i] = 0; 
+   }
+        
   //for front sensors
-  for (i = 0; i < 6; i++){
-     if (sensorArray[i] < potval){
-     front = 1; //read the first six values into sensorvalue array and check if they are less than setting
-     obstacledetection[0] = 1;
+  for (int j = 0; j < 6; j++){     //read the first six values into sensorvalue array and check if they are less than pot setting
+                              // if so then set first index of obstacledetection array to 1
+     if (sensorArray[j] < potval){
+      obstacledetection[0] = 1;
      }
   }
   
-//     Serial.print(" front = ");
-//     Serial.print(front);
-//     Serial.print(" ");
-//     Serial.println();
-//     
     //for right sensors
-  for (i = 6; i < 12; i++){
-     if (sensorArray[i] < potval){
-      right = 1; //read the first six values into sensorvalue array and check if they are less than setting
-     obstacledetection[1] = 1;
+  for (int k = 6; k < 12; k++){
+     if (sensorArray[k] < potval){
+      obstacledetection[1] = 1;
      }
   }
-//     Serial.print(" right = ");
-//     Serial.print(right);
-//     Serial.print(" ");
-//     Serial.println();
-//
-//     
   
     //for rear sensors
-  for (i = 12; i < 18; i++){
-     if (sensorArray[i] < potval){
-     rear = 1; //read the first six values into sensorvalue array and check if they are less than setting
-     obstacledetection[2] = 1;
+  for (int l = 12; l < 18; l++){
+     if (sensorArray[l] < potval){
+      obstacledetection[2] = 1;
      }
   }
-//     Serial.print(" rear = ");
-//     Serial.print(rear);
-//     Serial.print(" ");
-//     Serial.println();
-//     
-
+   
     //for left sensors
-  for (i = 18; i < 24; i++){
-     if (sensorArray[i] < potval){
-      left = 1; //read the first six values into sensorvalue array and check if they are less than setting
+  for (int m = 18; m < 24; m++){
+     if (sensorArray[m] < potval){
       obstacledetection[3] = 1;
      }
   }
-//     Serial.print(" left = ");
-//     Serial.print(left);
-//     Serial.print(" ");
 
-   for(i = 0; i < 4; i++){
-    Serial.print(obstacledetection[i]);
+    //print the obstacle detection array to confirm it works
+   for(int n = 0; n < 4; n++){
+    Serial.print(obstacledetection[n]);
     Serial.print(" "); 
    }
 }
