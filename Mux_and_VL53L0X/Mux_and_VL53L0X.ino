@@ -151,7 +151,7 @@ digitalWrite(mux1en, LOW); //turn mux 1 ON
 digitalWrite(mux2en, HIGH); //turn mux 2 OFF
 
 parsearray(); //processes sensor data and writes to the obstacle detection array
-
+publishvalues();
   
 } 
   
@@ -159,8 +159,10 @@ void publishvalues(void){
 //this should publish the values over serial that are processed from parsing function as four numbers (0, 0, 0, 0)
 //indexed as (Front, Left, Rear, Right) with 0 indicating no object above threshold (potval) and 1 indicating an object
 //is present that is below threshold value
-
-
+  Serial.print("Incoming Obstacle Data");
+  for (int i = 0; i < 4; i++){
+  Serial.println(obstacledetection[i]);
+  }
 }
 
 void parsearray(void){
