@@ -81,7 +81,7 @@ digitalWrite(s3, LOW);
 digitalWrite(mux2en, HIGH); //initialize the mux 2 OFF
 
 
-Serial.begin(115200);
+Serial.begin(9600);
 
 
   
@@ -121,9 +121,9 @@ int obstacledetection[] = {0, 0, 0, 0}; //initialize obstacle detection array to
 
 void loop(){
 potval = analogRead(0); //read the value of trimpot
-Serial.print("analog 0 is: ");
-Serial.println(potval);
-
+//Serial.print("analog 0 is: ");
+//Serial.println(potval);
+//delay(100);
 //readmuxes();
 parsearray(); //processes sensor data and writes to the obstacle detection array
 publishvalues();
@@ -164,9 +164,28 @@ void publishvalues(void){
 //this should publish the values over serial that are processed from parsing function as four numbers (0, 0, 0, 0)
 //indexed as (Front, Left, Rear, Right) with 0 indicating no object above threshold (potval) and 1 indicating an object
 //is present that is below threshold value
-  Serial.print("Incoming Obstacle Data");
+ 
+ // Serial.print("Incoming Obstacle Data");
   for (int i = 0; i < 4; i++){
-  Serial.println(obstacledetection[i]);
+    if (i == 0){
+      Serial.print("front");
+      Serial.println();
+      }
+    if (i == 1){
+      Serial.print("left");
+      Serial.println();
+      }
+    if (i == 2){
+      Serial.print("rear");
+      Serial.println();
+      }
+    if (i == 3){
+      Serial.print("right");
+      Serial.println();
+      }
+    Serial.print(obstacledetection[i]);
+    Serial.println();
+    delay(100);
   }
 }
 
