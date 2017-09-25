@@ -113,7 +113,7 @@ digitalWrite(mux1en, LOW); //turn mux 1 ON
 digitalWrite(mux2en, HIGH); //turn mux 2 OFF
 }
 
-int sensorArray[] = {1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000}; //fake test array
+int sensorArray[] = {1000,1000,400,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,800,1000,1000,1000, 1000,1000,900,1000,1000,1000}; //fake test array
 //int sensorArray[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}; //holds 24 sensor values
 
 int obstacledetection[] = {0, 0, 0, 0}; //initialize obstacle detection array to hold obstacle direction values (Front, Right, Rear, Left)  
@@ -169,6 +169,12 @@ void publishvalues(void){
 
       Serial.print("front = ");
       Serial.println(obstacledetection[0]);
+      Serial.print("right = ");
+      Serial.println(obstacledetection[1]);
+      Serial.print("rear = ");
+      Serial.println(obstacledetection[2]);
+      Serial.print("left = ");
+      Serial.println(obstacledetection[3]);            
       delay(1000);
     
 }
