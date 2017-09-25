@@ -47,6 +47,8 @@ int d2 = 9;
 int d3 = 10;
 int mux2en = 11;  //ENABLE PIN
 
+// Potentiometer to trim the sensitivity of array
+int potval = 0;
 void setup(){
   //    Initialize MUX 1 and MUX 2
   
@@ -102,8 +104,8 @@ digitalWrite(mux2en, LOW); //turn mux 2 ON
 
 
 //initialize MUX 2 - sensors 17-24
-for(int i = 0; i < 8; i ++){ 
-    initializeMux2(i); //assign the returned value to a number
+for(int j = 0; j < 8; j ++){ 
+    initializeMux2(j); //assign the returned value to a number
   } 
 
 
@@ -114,36 +116,115 @@ digitalWrite(mux2en, HIGH); //turn mux 2 OFF
 int sensorArray[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}; //holds 24 sensor values
 
 void loop(){
+potval = analogRead(0); //read the value of trimpot
+Serial.print("analog 0 is: ");
+Serial.println(potval);
 // Read MUX 1
 
-for(int i = 0; i < 16; i ++){ 
-  readMux1(i);
+for(int k = 0; k < 16; k ++){ 
+  readMux1(k);
   Serial.print("Value at channel "); 
-  Serial.print(i); 
+  Serial.print(k); 
   Serial.print("is : "); 
-  Serial.println(sensorArray[i]); 
+  Serial.println(sensorArray[k]); 
  }
 
-Serial.println(sensorArray);
+//Serial.print(sensorArray);
 
 digitalWrite(mux1en, HIGH); //turn mux 1 OFF
 digitalWrite(mux2en, LOW); //turn mux 2 ON
 
 // Read MUX 2
-for(int i = 0; i < 8; i ++){ 
-  readMux2(i);
+for(int l = 0; l < 8; l ++){ 
+  readMux2(l);
   Serial.print("Value at channel "); 
-  Serial.print(i); 
+  Serial.print(l); 
   Serial.print("is : "); 
-  Serial.println(sensorArray[i]); 
+  Serial.println(sensorArray[l]); 
  }
-Serial.println(sensorArray);
+//Serial.print(sensorArray);
 
 digitalWrite(mux1en, LOW); //turn mux 1 ON
 digitalWrite(mux2en, HIGH); //turn mux 2 OFF
+
   
 } 
   
+void publishvalues(void){
+//this should publish the values over serial that are processed from parsing function as four numbers (0, 0, 0, 0)
+//indexed as (Front, Left, Rear, Right) with 0 indicating no object above threshold (potval) and 1 indicating an object
+//is present that is below threshold value
+}
+
+void parsearray(void){
+//this should take the measurements from sensors designated as sensors 1-6 as front obstacle, sensors 7-12 are right obstacle, 
+//sensors 13-18 as rear obstacle and sensors 19-24 as left obstacle and compare them to threshold value from potentiometer
+// if they are less than the value then change variables front, rear, left, and right respectively to 1.
+  int obstacledetection[] = {0, 0, 0, 0}; //initialize array to hold obstacle direction values   
+  int i;
+  int front = 0; //initialize obstacle variables at 0
+  int rear = 0; 
+  int left = 0;
+  int right = 0;
+  
+  //for front sensors
+  for (i = 0; i < 6; i++){
+     if (sensorArray[i] < potval){
+     front = 1; //read the first six values into sensorvalue array and check if they are less than setting
+     obstacledetection[0] = 1;
+     }
+  }
+  
+//     Serial.print(" front = ");
+//     Serial.print(front);
+//     Serial.print(" ");
+//     Serial.println();
+//     
+    //for right sensors
+  for (i = 6; i < 12; i++){
+     if (sensorArray[i] < potval){
+      right = 1; //read the first six values into sensorvalue array and check if they are less than setting
+     obstacledetection[1] = 1;
+     }
+  }
+//     Serial.print(" right = ");
+//     Serial.print(right);
+//     Serial.print(" ");
+//     Serial.println();
+//
+//     
+  
+    //for rear sensors
+  for (i = 12; i < 18; i++){
+     if (sensorArray[i] < potval){
+     rear = 1; //read the first six values into sensorvalue array and check if they are less than setting
+     obstacledetection[2] = 1;
+     }
+  }
+//     Serial.print(" rear = ");
+//     Serial.print(rear);
+//     Serial.print(" ");
+//     Serial.println();
+//     
+
+    //for left sensors
+  for (i = 18; i < 24; i++){
+     if (sensorArray[i] < potval){
+      left = 1; //read the first six values into sensorvalue array and check if they are less than setting
+      obstacledetection[3] = 1;
+     }
+  }
+//     Serial.print(" left = ");
+//     Serial.print(left);
+//     Serial.print(" ");
+
+   for(i = 0; i < 4; i++){
+    Serial.print(obstacledetection[i]);
+    Serial.print(" "); 
+   }
+}
+
+
 void readMux1(int chan){ //points to global sensorarray
     //returns the range of the sensor specified using the channel variable as input for muxer
     int controlPin[] = {s0, s1, s2, s3};
@@ -234,7 +315,7 @@ void readMux2(int chan){
 }
     
 
-void initializeMux1(int channel){
+void initializeMux1(int chan){
     // pass this function a channel and integer value to write to the I2C port
     // it will return a new value that is returned
     int controlPin[] = {s0, s1, s2, s3};
@@ -257,8 +338,8 @@ void initializeMux1(int channel){
     }; 
     //loop through the 4 sig to set the pins for mux channel
     for(int i = 0; i < 4; i ++){
-      digitalWrite(controlPin[i], muxChannel[channel][i]);
-      } 
+      digitalWrite(controlPin[i], muxChannel[chan][i]);
+      }; 
     
 
     sensor.init();
@@ -288,7 +369,7 @@ void initializeMux1(int channel){
     
 }
 
-void initializeMux2(int channel){
+void initializeMux2(int chan){
     // pass this function a channel and integer value to write to the I2C port
     // it will return a new value that is returned
     int controlPin[] = {d0, d1, d2, d3};
@@ -311,7 +392,7 @@ void initializeMux2(int channel){
     }; 
     //loop through the 4 sig to set the pins for mux channel
     for(int i = 0; i < 4; i ++){
-      digitalWrite(controlPin[i], muxChannel[channel][i]);
+      digitalWrite(controlPin[i], muxChannel[chan][i]);
       } 
     
 
