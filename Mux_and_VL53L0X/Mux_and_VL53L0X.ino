@@ -124,7 +124,7 @@ for(int i = 0; i < 16; i ++){
   Serial.println(sensorArray[i]); 
  }
 
-Serial.println(sensorArray[]);
+Serial.println(sensorArray);
 
 digitalWrite(mux1en, HIGH); //turn mux 1 OFF
 digitalWrite(mux2en, LOW); //turn mux 2 ON
@@ -137,7 +137,7 @@ for(int i = 0; i < 8; i ++){
   Serial.print("is : "); 
   Serial.println(sensorArray[i]); 
  }
-Serial.println(sensorArray[]);
+Serial.println(sensorArray);
 
 digitalWrite(mux1en, LOW); //turn mux 1 ON
 digitalWrite(mux2en, HIGH); //turn mux 2 OFF
@@ -165,7 +165,7 @@ void readMux1(int chan){ //points to global sensorarray
     {1,1,1,1} //channel 15
     }; //loop through the 4 sig 
     for(int i = 0; i < 4; i ++){
-      digitalWrite(controlPin[i], muxChannel[channel][i]);
+      digitalWrite(controlPin[i], muxChannel[chan][i]);
       } 
     
    //Serial.print(sensor.readRangeSingleMillimeters());
@@ -208,7 +208,7 @@ void readMux2(int chan){
     {1,1,1,1} //channel 15
     }; //loop through the 4 sig 
     for(int i = 0; i < 4; i ++){
-      digitalWrite(controlPin[i], muxChannel[channel][i]);
+      digitalWrite(controlPin[i], muxChannel[chan][i]);
       } 
     
    //Serial.print(sensor.readRangeSingleMillimeters());
