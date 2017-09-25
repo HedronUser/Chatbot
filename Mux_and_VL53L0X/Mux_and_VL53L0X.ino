@@ -88,11 +88,11 @@ for(int i = 0; i < 3; i ++){
   Serial.print("is : "); 
   Serial.println(readMux(i)); 
    }
-//  for(int i = 0; i < 3; i++)
-//{
-//  Serial.println(sensorArray[i]);
-//}
-delay(1000);
+  for(int i = 0; i < 3; i++)
+{
+  Serial.println(sensorArray[i]);
+}
+delay(100);
 } 
   
 int readMux(int channel){
