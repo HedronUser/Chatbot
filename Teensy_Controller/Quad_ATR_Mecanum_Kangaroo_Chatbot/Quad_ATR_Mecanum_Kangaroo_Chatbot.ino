@@ -24,6 +24,9 @@
    License: CCAv3.0 Attribution-ShareAlike (http://creativecommons.org/licenses/by-sa/3.0/)
    You're free to use this code for any venture. Attribution is greatly appreciated. 
 //============================================================================================
+Spektrum DX5e:
+http://www.superdroidrobots.com/shop/item.aspx/spektrum-dx5etransmitter-with-ar610-receiver/992/
+
 */
 
 // ****************************************************
@@ -57,15 +60,32 @@ KangarooChannel KR2(K, '4', 128);
 KangarooChannel KF1(K, '1', 128);
 KangarooChannel KF2(K, '2', 128);
 
+// RC mappings -- strafe: aileron, drive: elevation, turn: rudder
+int strafePinRC = 6, drivePinRC = 5, turnPinRC = 4;
+int strafeSignal5Vpin = 3;
+int eStopPin = 2;
+// note: sabertooth pins are 6 for Tx(S1) and 7 for EStop(S2)
+// *********************
+// RC Vars
+// *********************
+unsigned long DRIVE_PULSE_WIDTH;
+unsigned long TURN_PULSE_WIDTH;
+unsigned long STRAFE_PULSE_WIDTH;
+float pulseLow = 1051, pulseHigh = 1890;
+
+float mByte = 0, bByte = 0;
+float mFloat = 0, bFloat = 0;
 
 // ****************************************************
 // Initial setup function, called once
 // RETURNS: none
 // ****************************************************
 void setup() {
-  
+ //Serial.begin(9600);  //debug output for teensy controller and also input for USB controls sent from Pi
   SerialPort.begin(115200);   // Initialize our Serial to 115200. This seems to be
-  //Serial.listen();      // the most reliable baud rate to the kangaroo.
+  //Serial.listen();      //not sure why this listen command is commented out
+  // the most reliable baud rate to the kangaroo according to SuperDroid
+                          // kangaroos are default at 9600
   
   // Start each Kangaroo channel. The commented ".wait()" command
   // holds the program until init has completed. This is not necessary
@@ -80,6 +100,7 @@ void setup() {
 
   KF2.start();
   KF2.home();//.wait();
+// Serial.print("getting here");
 
 //K1.serialTimeout(1000); // If we don't send anything to the Kangaroo for 1 second (1000 ms),
                           // it will abort and hold position (if the last command was position)
@@ -88,6 +109,22 @@ void setup() {
                           // recover from a serial timeout, start() has to be issued again.
                           // Try disconnecting the TX line from S1 temporarily to see it in action.
 
+  // set estop pin as input and pull high
+  pinMode(eStopPin,INPUT); 
+  
+  // 3.3V or 5V reference for strafe signal (add level shifter for 5V if receiver needs this)
+  pinMode(strafeSignal5Vpin, OUTPUT); 
+  digitalWrite(strafeSignal5Vpin, HIGH);
+  
+  // slope/intercept for converting RC signal to range [-1,1]
+  mFloat = (float)2 / (pulseHigh - pulseLow);
+  bFloat = -1*pulseLow*mFloat;
+  
+  // slope/intercept for converting [-1,1] to [-127,127]
+  mByte = (float)255 / (1 -  0);
+  bByte = 0;
+  
+
 }
 
 // ****************************************************
@@ -95,16 +132,89 @@ void setup() {
 // RETURNS: none
 // ****************************************************
 void loop() {
+
+ // Read in the RC pulses
+  DRIVE_PULSE_WIDTH = pulseIn(drivePinRC, HIGH);//, PULSEIN_TIMEOUT);
+  TURN_PULSE_WIDTH  = pulseIn(turnPinRC, HIGH);//, PULSEIN_TIMEOUT);
+  STRAFE_PULSE_WIDTH  = pulseIn(strafePinRC, HIGH);//, PULSEIN_TIMEOUT);
+
+////~1500 is 0 mark 
+//  DRIVE_PULSE_WIDTH = 1700;//, PULSEIN_TIMEOUT); //  if width > 1500 it moves forward
+//  TURN_PULSE_WIDTH  = 1500;//, PULSEIN_TIMEOUT); //if width > 1500 it rotates right CW
+//  STRAFE_PULSE_WIDTH  = 1500;//, PULSEIN_TIMEOUT); // if width > 1500 it shifts right
+
+//  // If pulses too short, throw sabertooth estop
+  if(DRIVE_PULSE_WIDTH < 500 || TURN_PULSE_WIDTH < 500 || STRAFE_PULSE_WIDTH < 500) {
+    //digitalWrite(eStopPin, LOW);
+    powerOff(); //turn off motors
+    Serial.print("Signal is bad or missing");
+    return;
+  }
+
+//  // otherwise, unthrow estop
+//  digitalWrite(eStopPin, HIGH);
+
+  // convert RC signals to continuous values from [-1,1]
+  float driveVal = convertRCtoFloat(DRIVE_PULSE_WIDTH);
+  float turnVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
+  float strafeVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
   
+  // convert the [-1,1] values to bytes in range [-127,127] for sabertooths
+  //this also appears to be mixing the values in order to drive each wheel correctly
+  // I checked the output and it works, brilliant I dont knnow how.
+  // I'm going to try casting as a different type cause chars 
+//  char motorFR = -1*convertFloatToByte(driveVal + turnVal + strafeVal);
+//  char motorRR = convertFloatToByte(driveVal + turnVal - strafeVal);
+//  char motorFL = -1*convertFloatToByte(driveVal - turnVal - strafeVal);
+//  char motorRL = convertFloatToByte(driveVal - turnVal + strafeVal);
+
+  int motorFR = -1*convertFloatToByte(driveVal + turnVal + strafeVal);
+  int motorRR = convertFloatToByte(driveVal + turnVal - strafeVal);
+  int motorFL = -1*convertFloatToByte(driveVal - turnVal - strafeVal);
+  int motorRL = convertFloatToByte(driveVal - turnVal + strafeVal);  
+
+  // command motors for sabertooth driver only- need to port this to kangas
+//  ST1.motor(1,motorFL); ST1.motor(2,motorFR);
+//  ST2.motor(1,motorRR); ST2.motor(2,motorRL);
+
+// command motors for kangaroo drivers
+    KF1.s(motorFL); //motor '1'
+    KF2.s(motorFR); //motor '2'   
+    KR1.s(motorRL); //motor '3'
+    KR2.s(motorRR); //motor '4'
+  
+  //mcSerial.print("EOF");  //realterm sync
+  
+  // debug print
+//  Serial.print(DRIVE_PULSE_WIDTH); Serial.print(","); Serial.print(TURN_PULSE_WIDTH);
+//  Serial.print(","); Serial.print(STRAFE_PULSE_WIDTH);
+//  Serial.print("\t");
+//  Serial.print(motorFR);  Serial.print(","); 
+//  Serial.print(motorRR);Serial.print(",");
+//  Serial.print(motorFL);  Serial.print(","); 
+//  Serial.print(motorRL);  Serial.print(","); 
+//  Serial.print("\n");
+
+//set timer to expire if motion hasn't been sent for awhile
+
+
+}
+  
+ 
+ 
+ void testdrive(void){
+  // Demonstrates forward movement
+
+
   long scalar = 0;               // Temporary values to hold
   long speedTemp1, speedTemp2;   // our assigned speeds
 
-  // Demonstrates forward movement
   for (scalar = 0; scalar < 400000; scalar++) {
     
     speedTemp1 = scalar;
     speedTemp2 = 0 - scalar;
-    
+
+    //this drives in machine units per second by default or inches per second if programmed with describe
     KF1.s(speedTemp1);
     KF2.s(speedTemp1);    
     KR1.s(speedTemp2);
@@ -196,8 +306,35 @@ void loop() {
 void powerOff(void){
     //this function can be used to save power when bot is not being driven
     // Notice that the Kangaroo provides no special resistance while the channel is powered down.
- // KF1.powerDown();
- // KF2.powerDown();
- // KR1.powerDown();
- // KR2.powerDown();
+  KF1.powerDown();
+  KF2.powerDown();
+  KR1.powerDown();
+  KR2.powerDown();
   }
+
+  
+float convertRCtoFloat(unsigned long pulseWidth)
+{
+  // deadband - to increase the deadband adjust first value (1450) down and second value (1550) up
+  if(pulseWidth > 1450 && pulseWidth < 1550) { pulseWidth = (float)(pulseHigh + pulseLow) / 2; }
+  
+  float checkVal = mFloat*pulseWidth + bFloat - 1;
+  checkVal = checkVal < -1 ? -1 : checkVal;
+  checkVal = checkVal >  1 ?  1 : checkVal;
+//  Serial.print(checkVal);
+  return checkVal;
+}
+
+char convertFloatToByte(float value)
+{
+  float checkVal = mByte*value + bByte; // y = mx + b 
+  checkVal = checkVal < -127 ? -127 : checkVal; //sets a lower limit on what the value can be
+  checkVal = checkVal >  127 ?  127 : checkVal; // sets an upper limit
+//  Serial.print(checkVal);
+//  Serial.print(" ");
+
+  char returnVal = (char)(checkVal);
+  return returnVal;
+}
+
+
