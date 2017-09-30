@@ -10,10 +10,14 @@ or run pydoc pyOSC.py. you can also get the docs by opening a python shell and d
 """
 
 import serial
+import json
+
 import OSC
 import time, threading
+
 import os
-import json
+
+import decision_engine
 
 ##################
 #GLOBAL VARIABLES#
@@ -117,29 +121,11 @@ while True:
 ###
     time.sleep(.005)
     data = ser.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
-    j = json.loads(data)
-    print(j["channel_data"][0])
+    j_sensor = json.loads(data)
 ###
 #############################
 
-
-
-##    if (words[0] == 'front' and words[2] == '1'):
-##        print 'Obstacle in front'
-##    elif (words[0] == 'front' and words[2] == '0'):
-##        print 'Obstacle free'
-##    if (words[0] == 'right' and words[2] == '1'):
-##        print 'Obstacle on right'
-##    elif (words[0] == 'right' and words[2] == '0'):
-##        print 'Obstacle free'
-##    if (words[0] == 'rear' and words[2] == '1'):
-##        print 'Obstacle in rear'
-##    elif (words[0] == 'rear' and words[2] == '0'):
-##        print 'Obstacle free'
-##    if (words[0] == 'left' and words[2] == '1'):
-##        print 'Obstacle on left'
-##    elif (words[0] == 'left' and words[2] == '0'):
-##        print 'Obstacle free'
+    j_movement = decision_engine.sensor_filter(j_sensor,j_osc)
 
 
 try :
