@@ -9,9 +9,30 @@ or run pydoc pyOSC.py. you can also get the docs by opening a python shell and d
 >>> help(OSC)
 """
 
-
+import serial
 import OSC
 import time, threading
+
+
+ser = serial.Serial(
+    port='/dev/ttyACM0',
+    baudrate = 9600,
+    parity=serial.PARITY_NONE,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=1
+    )
+
+
+
+print "Serial is open: " + str(ser.isOpen())
+front = 'front'
+right = 'right'
+rear = 'rear'
+left = 'left'
+
+
+
 
 # tupple with ip, port. i dont use the () but maybe you want -> send_address = ('127.0.0.1', 9000)
 receive_address = '192.168.0.150', 9000
@@ -54,6 +75,38 @@ print "\nStarting OSCServer. Use ctrl-C to quit."
 st = threading.Thread( target = s.serve_forever )
 st.start()
 
+##Listen over serial
+
+while True:
+    
+    x = ser.readline()
+    words = x.split()
+    
+
+    
+##    print words[0]
+##    print words[2]
+##    print words[3]
+##    print words[5]
+    
+##    
+    if (words[0] == 'front' and words[2] == '1'):
+        print 'Obstacle in front'
+    elif (words[0] == 'front' and words[2] == '0'):
+        print 'Obstacle free'
+    if (words[0] == 'right' and words[2] == '1'):
+        print 'Obstacle on right'
+    elif (words[0] == 'right' and words[2] == '0'):
+        print 'Obstacle free'
+    if (words[0] == 'rear' and words[2] == '1'):
+        print 'Obstacle in rear'
+    elif (words[0] == 'rear' and words[2] == '0'):
+        print 'Obstacle free'
+    if (words[0] == 'left' and words[2] == '1'):
+        print 'Obstacle on left'
+    elif (words[0] == 'left' and words[2] == '0'):
+        print 'Obstacle free'        
+
 
 try :
     while 1 :
@@ -66,3 +119,4 @@ except KeyboardInterrupt :
     st.join() ##!!!
     print "Done"
         
+
