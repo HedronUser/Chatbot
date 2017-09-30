@@ -1,9 +1,5 @@
 import json
 
-j_sensor = json.loads('{"channel_data":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}')
-
-#j_sensor
-j_sensor["channel_data"][1]
 
 def sensor_filter(j_sensor, j_osc):
     """
@@ -24,6 +20,7 @@ def sensor_filter(j_sensor, j_osc):
        17<-12
         BOTTOM
 
+    ##Plain English Algo##
     Given an obstacle in a direction, zero out movement in that direction.
     In the case of any obstacle, zero out turning.
     """
