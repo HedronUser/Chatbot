@@ -1,0 +1,14 @@
+We are going to follow this model of git branching.
+
+http://nvie.com/posts/a-successful-git-branching-model/
+
+The simple way of looking at it is the 'master' branch is a stable release and the 'development' branch is where all the features, experiments, and fixes get merged into.
+
+If you are working on a feature but it isn't ready to share, keep a separate branch. Then when you are ready to share it, merge it into the 'development' branch.
+
+Once we get things stable or working, we can release a branch with a tag for a version number e.g. v0.1, to the 'master' branch.
+
+In this way we always have a stable branch to go back to in case we really break something in the devlopment branch.
+
+
+
