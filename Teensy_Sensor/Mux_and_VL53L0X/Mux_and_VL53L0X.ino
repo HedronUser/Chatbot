@@ -1,7 +1,6 @@
-//   VL53L0X and ROS  Publisher
-//
-//#include <ros.h>
-//#include <std_msgs/UInt8.h>
+/////////////////
+//   VL53L0X   //
+/////////////////
 
 #include <Wire.h>
 #include <VL53L0X.h>
@@ -9,9 +8,7 @@
 
 VL53L0X sensor;
 
-
-
-////DO WE NEED THIS DOCUMENTATION?///////////////
+////VL53L0X CONFIGURATION////////////////////////
 //
 // Uncomment this line to use long range mode. This
 // increases the sensitivity of the sensor and extends its
@@ -29,11 +26,7 @@ VL53L0X sensor;
 //#define HIGH_SPEED
 //#define HIGH_ACCURACY
 //
-//ros::NodeHandle nh;
-//std_msgs::UInt8 distance_msg;
-//ros::Publisher distance_publisher("tof_range_finder", &distance_msg);
-//
-////END DO WE NEED THIS DOCUMENTATION?////////////
+//////////////////////////////////////////////////
 
 
 
@@ -89,7 +82,21 @@ int muxChannel[16][4]={ {0,0,0,0}, //channel 0
 ////START SETUP////////////////////////////////////////
 //
 void setup(){
-    //    Initialize MUX 1 and MUX 2
+
+    ////BEGIN SERIAL///////////////////
+    //
+    // int baudrate = 115200;
+    int baudrate = 9600;
+    Serial.begin(baudrate);
+    while (!Serial) {
+        //Wait for serial port initialization
+    }
+    ////////////
+
+
+    ////SENSOR INITIALIZATION//////////////////
+    //
+    // Initialize MUX 1 and MUX 2
     pinMode(s0, OUTPUT);
     pinMode(s1, OUTPUT);
     pinMode(s2, OUTPUT);
@@ -116,16 +123,6 @@ void setup(){
     digitalWrite(mux2en, HIGH); //initialize the mux 2 OFF
 
 
-    ////BEGIN SERIAL///////////////////
-    //
-    //int baudrate = 115200;
-    int baudrate = 9600;
-    Serial.begin(baudrate);
-    ////////////
-
-
-    //// SENSOR INITIALIZATION //////////////////
-    //
     Wire.begin(); //Start I2C library
     delay(1000); // delay .1s
 
@@ -136,7 +133,6 @@ void setup(){
     digitalWrite(mux1en, HIGH); //turn mux 1 OFF
     digitalWrite(mux2en, LOW); //turn mux 2 ON
 
-
     //initialize MUX 2 - sensors 17-24
     for(int j = 0; j < 8; j ++){
         initializeMux(j, mux_2_ControlPin); //TODO?: assign the returned value to a number
@@ -145,36 +141,37 @@ void setup(){
     digitalWrite(mux2en, HIGH); //turn mux 2 OFF
     //
     //////////////////////////////////////////////
+
 }
 //
 ////END SETUP//////////////////////////////////////////
 
 
 
-////NOTE: What is this sensorArray?
-// int sensorArray[] = {1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000}; //fake test array
-// int sensorArray[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}; //holds 24 sensor values
-int sensorArray[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}; //holds 16 sensor values
-
-
-
 void loop(){
-    ////PRINT SERIAL JSON CHANNEL DATA///////////////
+    ////PRINT SERIAL JSON DATA///////////////
     //
     // JSON output:
     // "channel_data": array[24], each array has readMux output
     // "potval": analogRead of pin 0
     //
-    //Potential TODO: rename the array to be individual locations for better
-    //portability
+    // Potential TODO: rename the array to be individual locations for better
+    // portability
     //
-    //Consult ArduinoJson for additional examples and data types.
-    StaticJsonBuffer<200> jsonBuffer; //TODO: might be a dynamic buffer
+    // Consult ArduinoJson for additional examples and data types.
+    // https://github.com/bblanchon/ArduinoJson/blob/master/examples/JsonGeneratorExample/JsonGeneratorExample.in://github.com/bblanchon/ArduinoJson/blob/master/examples/JsonGeneratorExample/JsonGeneratorExample.ino
+    // Use the assistant to propertly compute StaticJsonBuffer
+    // https://bblanchon.github.io/ArduinoJson/assistant/
+    StaticJsonBuffer<360> jsonBuffer;
+        //NOTE: assumes the max string length of 5 chars for mux input value
+        // Strings include int values up to 99999 and 5 char error codes
+        // including the double-quotes "XXX"
+
     JsonObject& root = jsonBuffer.createObject();
 
-    root["potval"] = analogRead(0);  //Read trimpot value
+    root["potval"] = analogRead(0);  //Write trimpot value to "potval"
 
-    JsonArray& channel_data = root.createNestedArray("channel_data");
+    JsonArray& channel_data = root.createNestedArray("channel");
     for( int i = 0; i < 15; i++){   //for 16 channels
         channel_data.add(readMux(i, mux_1_ControlPin));
     }
@@ -182,25 +179,18 @@ void loop(){
         channel_data.add(readMux(j, mux_2_ControlPin));
     }
 
+    // TODO how many chars long can sensor return data be?
+    // potential JSON STRING:
+    // {"potval":12341,"channel":[12341,"toe",12311,...24 total]}
     root.printTo(Serial);
     Serial.println();//parser looks for println carriage return \r\n
 
     delay(1000); //Why a delay of 1 second?
     //
-    /////PRINT SERIAL JSON CHANNEL DATA//////////////
+    /////PRINT SERIAL JSON DATA//////////////
 }
 /////END LOOP()//////////////////////////////////////
 
-
-
-//TODO: move this method into the main loop for the most part
-void serialTimeoutJSON(){
-    StaticJsonBuffer<20> jsonBuffer;
-    JsonObject& root = jsonBuffer.createObject();
-    root["error"] = "sensor_timeout";
-    root.printTo(Serial);
-    Serial.println();
-}
 
 
 int readMux(int channel, int controlPin[]){
@@ -210,14 +200,14 @@ int readMux(int channel, int controlPin[]){
     }
 
     if (sensor.timeoutOccurred()) {
-        serialTimeoutJSON();
+        //Write out "timeout" to data array
+        return "toe"; // time out error:
+    } else {
+        //bind distance of sensor to range variable
+        int range = sensor.readRangeSingleMillimeters();
+        return range;
     }
-
-    int range = sensor.readRangeSingleMillimeters(); //bind distance of sensor to range variable
-
-    return range;
 }
-
 
 
 void initializeMux(int chan, int controlPin[]){
