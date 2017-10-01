@@ -25,12 +25,21 @@ def sensor_filter(j_sensor, j_osc):
     In the case of any obstacle, zero out turning.
     """
 
+    ##TODO: incorportate "potval" and "toe" timeouterror in channel_data
+    potval = j_sensor["potval"]
+
+
+    #for i in range(25):
+    #    if j_sesnor["channel"] == "toe":
+    #        pass #figure out what to do with data
+    #             #maybe replace with a value
+
     ##We sum over the sensor values to find if any sensor has
     ##been tripped. Positive non-zero number means obstacle.
-    top_obs = sum(j_sensor["channel_data"][0:5])
-    right_obs = sum(j_sensor["channel_data"][6:11])
-    bottom_obs = sum(j_sensor["channel_data"][12:17])
-    left_obs = sum(j_sensor["channel_data"][18:23])
+    top_obs = sum(j_sensor["channel"][0:5])
+    right_obs = sum(j_sensor["channel"][6:11])
+    bottom_obs = sum(j_sensor["channel"][12:17])
+    left_obs = sum(j_sensor["channel"][18:23])
     any_obs = top_obs + right_obs + bottom_obs + left_obs
 
     drive = j_osc["drive"] # 127 -> drive forward, -127 -> drive reverse
