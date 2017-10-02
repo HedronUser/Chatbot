@@ -25,24 +25,40 @@ import decision_engine
 ##################
 
 
+
+#####COMMS VARIABLES
+##
+#### SET DEFAULT ARDUINO DEVICE PATHS
+port_sensor = "/dev/ttyACM0"
+port_controller = "/dev/ttyACM1"
+
+##### FOR SETTING A DIFFERENT DEVICE BATH IN ENVIRONMENT VARIABLES
+### In a bash shell use:
+### > export ARDUINO_PATH=$path_to_device
+### In windows power shell useL
+### > set ARDUINO_$_PATH='$path_to_device'
+if "ARDUINO_SENSOR_PATH" in os.environ:
+    port = os.environ["ARDUINO_SENSOR_PATH"]
+if "ARDUINO_SENSOR_PATH" in os.environ:
+    port = os.environ["ARDUINO_CONTROLLER_PATH"]
+
+### SET ARDUINO SERIAL BAUDRATE
+baudrate = 9600
+##
+#####END COMMS VARIABLES#####
+
+
 #####SERIAL COMMS SETUP######
 ###
-def setup_serial():
+def setup_serial(port, baudrate):
     ##VARIABLES
-    port = "/dev/ttyACM0"
-    baudrate = 9600
+    #port = port
+    #baudrate = baudrate
     parity=serial.PARITY_NONE
     stopbits=serial.STOPBITS_ONE
     bytesize=serial.EIGHTBITS
     timeout=1
 
-    ##### FOR SETTING A DIFFERENT ARDUINO DEVICE PATH
-    ### In a bash shell use:
-    ### > export ARDUINO_PATH=$path_to_device
-    ### In windows power shell useL
-    ### > set ARDUINO_PATH='$path_to_device'
-    if "ARDUINO_PATH" in os.environ:
-        port = os.environ["ARDUINO_PATH"]
 
     ##RETURN SERIAL
     ser = serial.Serial(
@@ -54,19 +70,68 @@ def setup_serial():
         timeout=1
         )
     return ser
-ser = setup_serial()
+
+ser_sensor = setup_serial(port_sensor, baudrate)
+ser_controller = setup_serial(port_controller, baudrate)
 ###
 #############################
 
-  # TODO not sure if necessary:
-  #  print "Serial is open: " + str(ser.isOpen())
-  #  front = 'front'
-  #  right = 'right'
-  #  rear = 'rear'
-  #  left = 'left'
+
+
+##########BEGIN MOVEMENT COUNTING########
+##
+def count_movements(count_triplet, movement_triplet, *drive, *strafe,*turn)
+    """
+    The movement_triplet takes the form (drive, strafe, turn)
+    The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
+
+    for every drive, strafe, or turn, event handled, increments the count
+    and addeds to the movement_triplet total movement count
+    """
+    if (drive):
+        movement_triplet[0], count_triplet[0] = \
+                movement_triplet[0]+drive, count_triplet[0]+1
+    if (strafe):
+        movement_triplet[1], count_triplet[1] = \
+                movement_triplet[1]+drive, count_triplet[1]+1
+    if (turn):
+        movement_triplet[2], count_triplet[2] = \
+                movement_triplet[2]+drive, count_triplet[2]+1
+    return count_triplet, movement_triplet
+
+def avg_movement(count_triplet,movement_triplet)
+    """
+    The movement_triplet takes the form (drive, strafe, turn)
+    The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
+
+    Divides each total movement sum by the total counts of recorded movement messages
+    """
+    #make sure no div by zero
+    if count_triplet[0] <= 0: count_triplet[0]=1
+    if count_triplet[1] <= 0: count_triplet[1]=1
+    if count_triplet[2] <= 0: count_triplet[2]=1
+    # take simple average
+    movement_triplet[0] = movement_triplet[0] / count_triplet[0]
+    movement_triplet[1] = movement_triplet[1] / count_triplet[1]
+    movement_triplet[2] = movement_triplet[2] / count_triplet[2]
+    # checks to make sure values arent greater than abs(value)>=128?
+    # TODO: CHECKS
+
+    return movement_triplet
+
+### needed for movement counting & averaging
+count_triplet = 0,0,0
+movement_triplet = 0,0,0
+last_avg_timestamp = time.time()
+time_delta = .2 ## 200 ms
+
+##
+####END MOVEMENT COUNTING#########################
 
 ####OSC COMMS SETUP##########
 ###
+
+
 def setup_osc_comms():
     ##VARIABLES
     # tupple with ip, port. i dont use the () but maybe you want -> send_address = ('127.0.0.1', 9000)
@@ -92,6 +157,22 @@ def setup_osc_comms():
         print "data %s" % stuff
         print "---"
 
+
+    def drive_handler(addr, tags, stuff, source)
+        count_triplet, movement_triplet = \
+                count_movements(count_triplet, movement_triplet,\
+                                drive = stuff[0]
+
+    def strafe_handler(addr, tags, stuff, source)
+        count_triplet, movement_triplet = \
+                count_movements(count_triplet, movement_triplet,\
+                                strafe = stuff[0]
+
+    def turn_handler(addr, tags, stuff, source)
+        count_triplet, movement_triplet = \
+                count_movements(count_triplet, movement_triplet,\
+                                turn = stuff[0]
+
     s.addMsgHandler("/print", printing_handler) # adding our function
 
     # just checking which handlers we have added
@@ -103,6 +184,12 @@ def setup_osc_comms():
     print "\nStarting OSCServer. Use ctrl-C to quit."
     st = threading.Thread( target = s.serve_forever )
     st.start()
+
+    return s, st
+
+s, st =  setup_osc_comms()
+
+time.sleep(.1)
 ###
 ########################
 
@@ -110,22 +197,32 @@ def setup_osc_comms():
 #Begin Loops#
 #############
 
-
-
 ##Listen over serial
-time.sleep(.1)
 
 while True:
 
-######SERIAL RECEIVE -> JSON
+######SERIAL RECEIVE SENSOR -> JSON
 ###
     time.sleep(.005)
-    data = ser.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
+    data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
     j_sensor = json.loads(data)
 ###
 #############################
 
-    j_movement = decision_engine.sensor_filter(j_sensor,j_osc)
+######SERIAL WRITE CONTROLLER
+###
+### Check if the time_delta has elapsed
+    if (time.time() - last_avg_timestamp) > time_delta:
+        count_movements, count_triplet = \
+            avg_movement(count_movements, count_triplet)
+
+        ##SERIAL SEND CONTROLLER
+        j_movement = decision_engine.sensor_filter(j_sensor,j_osc)
+        ser_controller.write_line(j_movement)
+###
+###############################
+
+
 
 
 try :
