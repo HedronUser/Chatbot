@@ -80,7 +80,13 @@ ser_controller = setup_serial(port_controller, baudrate)
 
 ##########BEGIN MOVEMENT COUNTING########
 ##
-def count_movements(count_triplet, movement_triplet, *drive, *strafe,*turn)
+count_triplet = [0,0,0]
+movement_triplet = [0,0,0]
+last_avg_timestamp = time.time()
+time_delta = .2 ## 200 ms
+
+
+def count_movements(count_triplet, movement_triplet, **kwargs):
     """
     The movement_triplet takes the form (drive, strafe, turn)
     The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
@@ -88,18 +94,19 @@ def count_movements(count_triplet, movement_triplet, *drive, *strafe,*turn)
     for every drive, strafe, or turn, event handled, increments the count
     and addeds to the movement_triplet total movement count
     """
-    if (drive):
-        movement_triplet[0], count_triplet[0] = \
-                movement_triplet[0]+drive, count_triplet[0]+1
-    if (strafe):
-        movement_triplet[1], count_triplet[1] = \
-                movement_triplet[1]+drive, count_triplet[1]+1
-    if (turn):
-        movement_triplet[2], count_triplet[2] = \
-                movement_triplet[2]+drive, count_triplet[2]+1
+    for key, value in kwargs.items():
+        if key == "drive":
+            movement_triplet[0], count_triplet[0] = \
+                movement_triplet[0]+value, count_triplet[0]+1
+        if key == "strafe":
+            movement_triplet[1], count_triplet[1] = \
+                movement_triplet[1]+value, count_triplet[1]+1
+        if key == "turn":
+            movement_triplet[2], count_triplet[2] = \
+                movement_triplet[2]+value, count_triplet[2]+1
     return count_triplet, movement_triplet
 
-def avg_movement(count_triplet,movement_triplet)
+def avg_movement(count_triplet,movement_triplet):
     """
     The movement_triplet takes the form (drive, strafe, turn)
     The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
@@ -120,10 +127,6 @@ def avg_movement(count_triplet,movement_triplet)
     return movement_triplet
 
 ### needed for movement counting & averaging
-count_triplet = 0,0,0
-movement_triplet = 0,0,0
-last_avg_timestamp = time.time()
-time_delta = .2 ## 200 ms
 
 ##
 ####END MOVEMENT COUNTING#########################
@@ -158,22 +161,31 @@ def setup_osc_comms():
         print "---"
 
 
-    def drive_handler(addr, tags, stuff, source)
+    def drive_handler(addr, tags, stuff, source):
+        global count_triplet
+        global movement_triplet
         count_triplet, movement_triplet = \
-                count_movements(count_triplet, movement_triplet,\
-                                drive = stuff[0]
+                count_movements(count_triplet, movement_triplet,
+                                drive = int(stuff[0]))
 
-    def strafe_handler(addr, tags, stuff, source)
+    def strafe_handler(addr, tags, stuff, source):
+        global count_triplet
+        global movement_triplet
         count_triplet, movement_triplet = \
-                count_movements(count_triplet, movement_triplet,\
-                                strafe = stuff[0]
+                count_movements(count_triplet, movement_triplet,
+                                strafe = int(stuff[0]))
 
-    def turn_handler(addr, tags, stuff, source)
+    def turn_handler(addr, tags, stuff, source):
+        global count_triplet
+        global movement_triplet
         count_triplet, movement_triplet = \
-                count_movements(count_triplet, movement_triplet,\
-                                turn = stuff[0]
+                count_movements(count_triplet, movement_triplet,
+                                turn = int(stuff[0]))
 
     s.addMsgHandler("/print", printing_handler) # adding our function
+    s.addMsgHandler("/drive", drive_handler)
+    s.addMsgHandler("/strafe", strafe_handler)
+    s.addMsgHandler("/turn", turn_handler)
 
     # just checking which handlers we have added
     print "Registered Callback-functions are :"
@@ -213,12 +225,26 @@ while True:
 ###
 ### Check if the time_delta has elapsed
     if (time.time() - last_avg_timestamp) > time_delta:
-        count_movements, count_triplet = \
-            avg_movement(count_movements, count_triplet)
+        movement_triplet = \
+            avg_movement(count_triplet, movement_triplet)
+
+        s_movement = {"drive":movement_triplet[0],
+                      "strafe":movement_triplet[1],
+                      "turn":movement_triplet[2]}
+        j_movement = json.dumps(s_movement)
 
         ##SERIAL SEND CONTROLLER
         j_movement = decision_engine.sensor_filter(j_sensor,j_osc)
+
         ser_controller.write_line(j_movement)
+
+        ##Reset Counts
+        count_triplet = [0,0,0]
+        movement_triplet = [0,0,0]
+        
+        ##Reset Time Stamp
+        last_avg_timestamp = time.time()
+
 ###
 ###############################
 
