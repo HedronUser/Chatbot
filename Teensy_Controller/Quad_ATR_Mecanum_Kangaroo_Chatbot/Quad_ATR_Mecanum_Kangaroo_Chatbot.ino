@@ -61,9 +61,9 @@ KangarooChannel KF1(K, '1', 128);
 KangarooChannel KF2(K, '2', 128);
 
 // RC mappings -- strafe: aileron, drive: elevation, turn: rudder
-int strafePinRC = 6, drivePinRC = 5, turnPinRC = 4;
-int strafeSignal5Vpin = 3;
-int eStopPin = 2;
+int strafePinRC = 3, drivePinRC = 2, turnPinRC = 4;
+int strafeSignal5Vpin = 6;
+int eStopPin = 5;
 // note: sabertooth pins are 6 for Tx(S1) and 7 for EStop(S2)
 // *********************
 // RC Vars
@@ -81,7 +81,7 @@ float mFloat = 0, bFloat = 0;
 // RETURNS: none
 // ****************************************************
 void setup() {
- //Serial.begin(9600);  //debug output for teensy controller and also input for USB controls sent from Pi
+  Serial.begin(9600);  //debug output for teensy controller and also input for USB controls sent from Pi
   SerialPort.begin(115200);   // Initialize our Serial to 115200. This seems to be
   //Serial.listen();      //not sure why this listen command is commented out
   // the most reliable baud rate to the kangaroo according to SuperDroid
@@ -89,17 +89,17 @@ void setup() {
   
   // Start each Kangaroo channel. The commented ".wait()" command
   // holds the program until init has completed. This is not necessary
-  KR1.start();
-  KR1.home();//.wait();
-
-  KR2.start();
-  KR2.home();//.wait();
-  
-  KF1.start();
-  KF1.home();//.wait();
-
-  KF2.start();
-  KF2.home();//.wait();
+//  KR1.start();
+//  KR1.home();//.wait();
+//
+//  KR2.start();
+//  KR2.home();//.wait();
+//  
+//  KF1.start();
+//  KF1.home();//.wait();
+//
+//  KF2.start();
+//  KF2.home();//.wait();
 // Serial.print("getting here");
 
 //K1.serialTimeout(1000); // If we don't send anything to the Kangaroo for 1 second (1000 ms),
@@ -111,6 +111,11 @@ void setup() {
 
   // set estop pin as input and pull high
   pinMode(eStopPin,INPUT); 
+
+ // Set our input pins for RF as such 
+  pinMode(turnPinRC, INPUT); 
+  pinMode(drivePinRC, INPUT);
+  pinMode(strafePinRC, INPUT);
   
   // 3.3V or 5V reference for strafe signal (add level shifter for 5V if receiver needs this)
   pinMode(strafeSignal5Vpin, OUTPUT); 
@@ -178,16 +183,16 @@ void loop() {
 //  ST2.motor(1,motorRR); ST2.motor(2,motorRL);
 
 // command motors for kangaroo drivers
-    KF1.s(motorFL); //motor '1'
-    KF2.s(motorFR); //motor '2'   
-    KR1.s(motorRL); //motor '3'
-    KR2.s(motorRR); //motor '4'
+//    KF1.s(motorFL); //motor '1'
+//    KF2.s(motorFR); //motor '2'   
+//    KR1.s(motorRL); //motor '3'
+//    KR2.s(motorRR); //motor '4'
   
   //mcSerial.print("EOF");  //realterm sync
   
   // debug print
-//  Serial.print(DRIVE_PULSE_WIDTH); Serial.print(","); Serial.print(TURN_PULSE_WIDTH);
-//  Serial.print(","); Serial.print(STRAFE_PULSE_WIDTH);
+  Serial.print(DRIVE_PULSE_WIDTH); Serial.print(","); Serial.print(TURN_PULSE_WIDTH);
+  Serial.print(","); Serial.print(STRAFE_PULSE_WIDTH);
 //  Serial.print("\t");
 //  Serial.print(motorFR);  Serial.print(","); 
 //  Serial.print(motorRR);Serial.print(",");
