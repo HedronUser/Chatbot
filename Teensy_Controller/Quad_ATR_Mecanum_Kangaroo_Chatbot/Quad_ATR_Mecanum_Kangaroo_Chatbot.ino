@@ -38,27 +38,39 @@ http://www.superdroidrobots.com/shop/item.aspx/spektrum-dx5etransmitter-with-ar6
 // ****************************************************
 // Motor Controller Initialization
 // ****************************************************
+//truths
+// white wire is S1 front
+// blue wire is S2 front
+
+//white wire is S1 rear
+//yellow wire is S2 rear
 
 // Teensy TX (pin 11) goes to Kangaroo S1
 // Teensy RX (pin 10) goes to Kangaroo S2
 // Teensy GND         goes to Kangaroo 0V
 // Teensy 5V input    goes to Kangaroo 5V (OPTIONAL, if you want Kangaroo to power the Teensy)
-#define TX_PIN 10
-#define RX_PIN 9
+#define TX2_PIN 10  // blue wire
+#define RX2_PIN 9 //white wire
+#define TX3_PIN 8
+#define RX3_PIN 7
 
 // Assign the serial COM to the Kangaroo as Serial1 on the Teensy
-SoftwareSerial  SerialPort(RX_PIN, TX_PIN);
-KangarooSerial  K(SerialPort);
+SoftwareSerial  SerialPort1(RX2_PIN, TX2_PIN);
+SoftwareSerial  SerialPort2(RX3_PIN, TX3_PIN);
+
+KangarooSerial  K1(SerialPort1);
+KangarooSerial  K2(SerialPort2);
+
 
 // Initialize our Kangroo objects. The named channels (1, 2, 3, or 4) must be configured on
 // the Kangroo itself. This will require using the Describe software as well as a USB to TTL
 // cable. 
 // http://www.dimensionengineering.com/info/describe
-KangarooChannel KR1(K, '3', 128);
-KangarooChannel KR2(K, '4', 128);
+KangarooChannel KR1(K2, '1', 128); // used to be '3'
+KangarooChannel KR2(K2, '2', 128); // used to be '4'
 
-KangarooChannel KF1(K, '1', 128);
-KangarooChannel KF2(K, '2', 128);
+KangarooChannel KF1(K1, '1', 128);
+KangarooChannel KF2(K1, '2', 128);
 
 // RC mappings -- strafe: aileron, drive: elevation, turn: rudder
 int strafePinRC = 3, drivePinRC = 2, turnPinRC = 4;
@@ -82,25 +94,28 @@ float mFloat = 0, bFloat = 0;
 // ****************************************************
 void setup() {
   Serial.begin(9600);  //debug output for teensy controller and also input for USB controls sent from Pi
-  SerialPort.begin(115200);   // Initialize our Serial to 115200. This seems to be
+  SerialPort1.begin(9600);   // Initialize our Serial to 115200. This seems to be
+  SerialPort2.begin(9600);   // Initialize our Serial to 115200. This seems to be
+
   //Serial.listen();      //not sure why this listen command is commented out
   // the most reliable baud rate to the kangaroo according to SuperDroid
                           // kangaroos are default at 9600
-  
+   Serial.print("getting here");
+
   // Start each Kangaroo channel. The commented ".wait()" command
   // holds the program until init has completed. This is not necessary
-//  KR1.start();
-//  KR1.home();//.wait();
-//
-//  KR2.start();
-//  KR2.home();//.wait();
-//  
-//  KF1.start();
-//  KF1.home();//.wait();
-//
-//  KF2.start();
-//  KF2.home();//.wait();
-// Serial.print("getting here");
+  KR1.start();
+  KR1.home();//.wait();
+
+  KR2.start();
+  KR2.home();//.wait();
+  
+  KF1.start();
+  KF1.home();//.wait();
+
+  KF2.start();
+  KF2.home();//.wait();
+ Serial.print("getting here");
 
 //K1.serialTimeout(1000); // If we don't send anything to the Kangaroo for 1 second (1000 ms),
                           // it will abort and hold position (if the last command was position)
@@ -178,27 +193,44 @@ void loop() {
   int motorFL = -1*convertFloatToByte(driveVal - turnVal - strafeVal);
   int motorRL = convertFloatToByte(driveVal - turnVal + strafeVal);  
 
+  int mappedmotorFR = map(motorFR, -127, 127, 300, -300); //these spinning backwards
+  int mappedmotorFL = map(motorFL, -127, 127, -300, 300); //FL
+  int mappedmotorRR = map(motorRR, -127, 127, -300, 300); //these spinning backwards //RL
+  int mappedmotorRL = map(motorRL, -127, 127, 300, -300); //
+
+
   // command motors for sabertooth driver only- need to port this to kangas
 //  ST1.motor(1,motorFL); ST1.motor(2,motorFR);
 //  ST2.motor(1,motorRR); ST2.motor(2,motorRL);
 
 // command motors for kangaroo drivers
-//    KF1.s(motorFL); //motor '1'
-//    KF2.s(motorFR); //motor '2'   
-//    KR1.s(motorRL); //motor '3'
-//    KR2.s(motorRR); //motor '4'
+    KF1.s(mappedmotorFL); //motor '1'
+    KF2.s(mappedmotorFR); //motor '2'   
+    KR1.s(mappedmotorRL); //motor '3'
+    KR2.s(mappedmotorRR); //motor '4'
   
   //mcSerial.print("EOF");  //realterm sync
   
   // debug print
-  Serial.print(DRIVE_PULSE_WIDTH); Serial.print(","); Serial.print(TURN_PULSE_WIDTH);
-  Serial.print(","); Serial.print(STRAFE_PULSE_WIDTH);
-//  Serial.print("\t");
-//  Serial.print(motorFR);  Serial.print(","); 
-//  Serial.print(motorRR);Serial.print(",");
-//  Serial.print(motorFL);  Serial.print(","); 
-//  Serial.print(motorRL);  Serial.print(","); 
-//  Serial.print("\n");
+  Serial.print("Drive: ");
+  Serial.print(DRIVE_PULSE_WIDTH); 
+  Serial.println(""); 
+  Serial.print("Strafe: ");
+  Serial.print(STRAFE_PULSE_WIDTH);
+  Serial.println(",");  
+  Serial.print("Turn: ");
+  Serial.print(TURN_PULSE_WIDTH);
+  Serial.println(","); 
+
+
+  Serial.print(motorFR);  
+  Serial.print(","); 
+  Serial.print(motorRR);
+  Serial.print(",");
+  Serial.print(motorFL);  
+  Serial.print(","); 
+  Serial.print(motorRL);  
+  Serial.print(","); 
 
 //set timer to expire if motion hasn't been sent for awhile
 
