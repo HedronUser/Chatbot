@@ -29,7 +29,7 @@ import decision_engine
 #####COMMS VARIABLES
 ##
 #### SET DEFAULT ARDUINO DEVICE PATHS
-port_sensor = "/dev/ttyACM0"
+#port_sensor = "/dev/ttyACM0"
 port_controller = "/dev/ttyACM1"
 
 ##### FOR SETTING A DIFFERENT DEVICE BATH IN ENVIRONMENT VARIABLES
@@ -71,7 +71,7 @@ def setup_serial(port, baudrate):
         )
     return ser
 
-ser_sensor = setup_serial(port_sensor, baudrate)
+#ser_sensor = setup_serial(port_sensor, baudrate)
 ser_controller = setup_serial(port_controller, baudrate)
 ###
 #############################
@@ -139,7 +139,7 @@ def setup_osc_comms():
     ##VARIABLES
     # tupple with ip, port. i dont use the () but maybe you want -> send_address = ('127.0.0.1', 9000)
     # receive_address = '192.168.0.150', 9000
-    receive_address = '127.0.0.2', 9000
+    receive_address = '192.168.1.52', 9000
 
     # OSC Server. there are three different types of server.
     s = OSC.OSCServer(receive_address) # basic
@@ -215,9 +215,9 @@ while True:
 
 ######SERIAL RECEIVE SENSOR -> JSON
 ###
-    time.sleep(.005)
-    data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
-    j_sensor = json.loads(data)
+#    time.sleep(.005)
+#    data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
+#    j_sensor = json.loads(data)
 ###
 #############################
 

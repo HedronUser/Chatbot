@@ -1,0 +1,18 @@
+
+
+RPi
+
+Make it so a closed serial port doesn't shut down the program. I want it to continuously try and open port (while also printing to the terminal if it isn't open).
+
+Here is current error message.
+Traceback (most recent call last):
+  File "chatbot.py", line 74, in <module>
+    ser_sensor = setup_serial(port_sensor, baudrate)
+  File "chatbot.py", line 70, in setup_serial
+    timeout=1
+  File "/usr/lib/python2.7/dist-packages/serial/serialutil.py", line 236, in __init__
+    self.open()
+  File "/usr/lib/python2.7/dist-packages/serial/serialposix.py", line 268, in open
+    raise SerialException(msg.errno, "could not open port {}: {}".format(self._port, msg))
+serial.serialutil.SerialException: [Errno 2] could not open port /dev/ttyACM0: [Errno 2] No such file or directory: '/dev/ttyACM0'
+
