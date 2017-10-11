@@ -14,7 +14,7 @@ import OSC
 import time, threading
 
 # tupple with ip, port. i dont use the () but maybe you want -> send_address = ('127.0.0.1', 9000)
-receive_address = '192.168.0.150', 9000
+receive_address = '192.168.1.52', 9000
 
 
 # OSC Server. there are three different types of server. 
