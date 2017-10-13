@@ -213,8 +213,8 @@ void loop() {
 //
   // convert RC signals to continuous values from [-1,1]
   float driveVal = convertRCtoFloat(DRIVE_PULSE_WIDTH);
-  float turnVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
-  float strafeVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
+  float strafeVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
+  float turnVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
 //  
   // convert the [-1,1] values to bytes in range [-127,127] for sabertooths
   //this also appears to be mixing the values in order to drive each wheel correctly
