@@ -151,7 +151,9 @@ void setup() {
 
   char json[] = "{\"drive\":0,\"strafe\":0,\"turn\":0}";
 
-
+     float driveVal =  0;
+     float turnVal = 0;
+     float strafeVal = 0;
 // ****************************************************
 // Main program loop. We'll cycle through commands here
 // RETURNS: none
@@ -171,36 +173,48 @@ void loop() {
 //  // If pulses too short, throw sabertooth estop
   if(DRIVE_PULSE_WIDTH < 500 || TURN_PULSE_WIDTH < 500 || STRAFE_PULSE_WIDTH < 500) {
     //digitalWrite(eStopPin, LOW);
-    //powerOff(); //turn off motors
-    Serial.print("Signal is bad or missing");
+    powerOff(); //turn off motors
+    Serial.print("RF Signal is bad or missing");
     return;
   }
 
 //  // otherwise, unthrow estop
 //  digitalWrite(eStopPin, HIGH);
 
-    StaticJsonBuffer<200> jsonBuffer;
 
-  // put your main code here, to run repeatedly:
-   JsonObject& root = jsonBuffer.parseObject(json);
-  // Test if parsing succeeds.
-  if (!root.success()) {
-    //Serial.println("parseObject() failed");
-    return;
-  }
-     int driveVal = root["drive"];
-     int turnVal = root["turn"];
-     int strafeVal = root["strafe"];
+
+//
+//    StaticJsonBuffer<200> jsonBuffer;
+//
+//  // put your main code here, to run repeatedly:
+//   JsonObject& root = jsonBuffer.parseObject(json);
+//  // Test if parsing succeeds.
+//  if (!root.success()) {
+//    //Serial.println("parseObject() failed");
+//    return;
+//  }
+//     int driveVal = root["drive"];
+//     int turnVal = root["turn"];
+//     int strafeVal = root["strafe"];
+
+//if (Serial.available() > 0) {
+//                // read the incoming byte:
+//  { inData = Serial.readStringUntil('\n');
+//    Serial.println("data: "+inData);
+//
+//     inData = ""; //clears buffer
+//  }
+
 //
 // Serial.print(driveval);
 // Serial.println();
 // Serial.println();
 
 //
-//  // convert RC signals to continuous values from [-1,1]
-//  float driveVal = convertRCtoFloat(DRIVE_PULSE_WIDTH);
-//  float turnVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
-//  float strafeVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
+  // convert RC signals to continuous values from [-1,1]
+  float driveVal = convertRCtoFloat(DRIVE_PULSE_WIDTH);
+  float turnVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
+  float strafeVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
 //  
   // convert the [-1,1] values to bytes in range [-127,127] for sabertooths
   //this also appears to be mixing the values in order to drive each wheel correctly
