@@ -34,6 +34,7 @@ http://www.superdroidrobots.com/shop/item.aspx/spektrum-dx5etransmitter-with-ar6
 // ****************************************************
 #include <Kangaroo.h>
 #include <SoftwareSerial.h> //this is needed for alternate serial pin designations on Teensy 3
+#include <ArduinoJson.h>
 
 // ****************************************************
 // Motor Controller Initialization
@@ -143,16 +144,20 @@ void setup() {
   // slope/intercept for converting [-1,1] to [-127,127]
   mByte = (float)255 / (1 -  0);
   bByte = 0;
-  
-
+ 
 }
+
+
+
+  char json[] = "{\"drive\":0,\"strafe\":0,\"turn\":0}";
+
 
 // ****************************************************
 // Main program loop. We'll cycle through commands here
 // RETURNS: none
 // ****************************************************
 void loop() {
-
+ 
  // Read in the RC pulses
   DRIVE_PULSE_WIDTH = pulseIn(drivePinRC, HIGH);//, PULSEIN_TIMEOUT);
   TURN_PULSE_WIDTH  = pulseIn(turnPinRC, HIGH);//, PULSEIN_TIMEOUT);
@@ -166,7 +171,7 @@ void loop() {
 //  // If pulses too short, throw sabertooth estop
   if(DRIVE_PULSE_WIDTH < 500 || TURN_PULSE_WIDTH < 500 || STRAFE_PULSE_WIDTH < 500) {
     //digitalWrite(eStopPin, LOW);
-    powerOff(); //turn off motors
+    //powerOff(); //turn off motors
     Serial.print("Signal is bad or missing");
     return;
   }
@@ -174,11 +179,29 @@ void loop() {
 //  // otherwise, unthrow estop
 //  digitalWrite(eStopPin, HIGH);
 
-  // convert RC signals to continuous values from [-1,1]
-  float driveVal = convertRCtoFloat(DRIVE_PULSE_WIDTH);
-  float turnVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
-  float strafeVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
-  
+    StaticJsonBuffer<200> jsonBuffer;
+
+  // put your main code here, to run repeatedly:
+   JsonObject& root = jsonBuffer.parseObject(json);
+  // Test if parsing succeeds.
+  if (!root.success()) {
+    //Serial.println("parseObject() failed");
+    return;
+  }
+     int driveVal = root["drive"];
+     int turnVal = root["turn"];
+     int strafeVal = root["strafe"];
+//
+// Serial.print(driveval);
+// Serial.println();
+// Serial.println();
+
+//
+//  // convert RC signals to continuous values from [-1,1]
+//  float driveVal = convertRCtoFloat(DRIVE_PULSE_WIDTH);
+//  float turnVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
+//  float strafeVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
+//  
   // convert the [-1,1] values to bytes in range [-127,127] for sabertooths
   //this also appears to be mixing the values in order to drive each wheel correctly
   // I checked the output and it works, brilliant I dont knnow how.
