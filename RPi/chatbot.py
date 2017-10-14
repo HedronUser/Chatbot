@@ -31,6 +31,7 @@ import decision_engine
 #### SET DEFAULT ARDUINO DEVICE PATHS
 #port_sensor = "/dev/ttyACM0"
 port_controller = "/dev/ttyAMA0"
+#port_controller = "/dev/ttyACM0" #not sure which one
 
 ##### FOR SETTING A DIFFERENT DEVICE BATH IN ENVIRONMENT VARIABLES
 ### In a bash shell use:
@@ -79,57 +80,57 @@ ser_controller = setup_serial(port_controller, baudrate)
 
 
 ##########BEGIN MOVEMENT COUNTING########
+##
+##count_triplet = [0,0,0]
+##movement_triplet = [0,0,0]
+##last_avg_timestamp = time.time()
+##time_delta = .2 ## 200 ms
+##
+##
+##def count_movements(count_triplet, movement_triplet, **kwargs):
+##    """
+##    The movement_triplet takes the form (drive, strafe, turn)
+##    The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
+##
+##    for every drive, strafe, or turn, event handled, increments the count
+##    and addeds to the movement_triplet total movement count
+##    """
+##    for key, value in kwargs.items():
+##        if key == "drive":
+##            movement_triplet[0], count_triplet[0] = \
+##                movement_triplet[0]+value, count_triplet[0]+1
+##        if key == "strafe":
+##            movement_triplet[1], count_triplet[1] = \
+##                movement_triplet[1]+value, count_triplet[1]+1
+##        if key == "turn":
+##            movement_triplet[2], count_triplet[2] = \
+##                movement_triplet[2]+value, count_triplet[2]+1
+##    return count_triplet, movement_triplet
+##
+##def avg_movement(count_triplet,movement_triplet):
+##    """
+##    The movement_triplet takes the form (drive, strafe, turn)
+##    The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
+##
+##    Divides each total movement sum by the total counts of recorded movement messages
+##    """
+##    #make sure no div by zero
+##    if count_triplet[0] <= 0: count_triplet[0]=1
+##    if count_triplet[1] <= 0: count_triplet[1]=1
+##    if count_triplet[2] <= 0: count_triplet[2]=1
+##    # take simple average
+##    movement_triplet[0] = movement_triplet[0] / count_triplet[0]
+##    movement_triplet[1] = movement_triplet[1] / count_triplet[1]
+##    movement_triplet[2] = movement_triplet[2] / count_triplet[2]
+##    # checks to make sure values arent greater than abs(value)>=128?
+##    # TODO: CHECKS
+##
+##    return movement_triplet
 
-count_triplet = [0,0,0]
-movement_triplet = [0,0,0]
-last_avg_timestamp = time.time()
-time_delta = .2 ## 200 ms
-
-
-def count_movements(count_triplet, movement_triplet, **kwargs):
-    """
-    The movement_triplet takes the form (drive, strafe, turn)
-    The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
-
-    for every drive, strafe, or turn, event handled, increments the count
-    and addeds to the movement_triplet total movement count
-    """
-    for key, value in kwargs.items():
-        if key == "drive":
-            movement_triplet[0], count_triplet[0] = \
-                movement_triplet[0]+value, count_triplet[0]+1
-        if key == "strafe":
-            movement_triplet[1], count_triplet[1] = \
-                movement_triplet[1]+value, count_triplet[1]+1
-        if key == "turn":
-            movement_triplet[2], count_triplet[2] = \
-                movement_triplet[2]+value, count_triplet[2]+1
-    return count_triplet, movement_triplet
-
-def avg_movement(count_triplet,movement_triplet):
-    """
-    The movement_triplet takes the form (drive, strafe, turn)
-    The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
-
-    Divides each total movement sum by the total counts of recorded movement messages
-    """
-    #make sure no div by zero
-    if count_triplet[0] <= 0: count_triplet[0]=1
-    if count_triplet[1] <= 0: count_triplet[1]=1
-    if count_triplet[2] <= 0: count_triplet[2]=1
-    # take simple average
-    movement_triplet[0] = movement_triplet[0] / count_triplet[0]
-    movement_triplet[1] = movement_triplet[1] / count_triplet[1]
-    movement_triplet[2] = movement_triplet[2] / count_triplet[2]
-    # checks to make sure values arent greater than abs(value)>=128?
-    # TODO: CHECKS
-
-    return movement_triplet
-
-count_triplet = [0,0,0]
-movement_triplet = [0,0,0]
-last_avg_timestamp = time.time()
-time_delta = .2 ##200 ms
+#count_triplet = [0,0,0]
+#movement_triplet = [0,0,0]
+#last_avg_timestamp = time.time()
+#time_delta = .2 ##200 ms
 
 ### needed for movement counting & averaging
 
@@ -164,13 +165,12 @@ s.addDefaultHandlers()
 ##    print "data %s" % stuff
 ##    print "---"
 
-##
+drive = 0
+strafe = 0
+turn = 0
 def drive_handler(addr, tags, stuff, source):
-    global count_triplet
-    global movement_triplet
-    count_triplet, movement_triplet = \
-            count_movements(count_triplet, movement_triplet,
-                            drive = int(stuff[0]))
+    global drive
+    drive = int(stuff[0])
     
 ##    print "drive"
 ##    print "addr: %s" % addr
@@ -178,27 +178,57 @@ def drive_handler(addr, tags, stuff, source):
 
 ##
 def strafe_handler(addr, tags, stuff, source):
-    global count_triplet
-    global movement_triplet
-    count_triplet, movement_triplet = \
-            count_movements(count_triplet, movement_triplet,
-                            strafe = int(stuff[0]))
+    global strafe
+    strafe = int(stuff[0])
+
 
 ##    print "strafe"
 ##    print "addr: %s" % addr
 ##    print "stuff: %s" % stuff
     
 def turn_handler(addr, tags, stuff, source):
-    global count_triplet
-    global movement_triplet
-    count_triplet, movement_triplet = \
-            count_movements(count_triplet, movement_triplet,
-                            turn = int(stuff[0]))
+    global turn
+    turn = int(stuff[0])
+    
 ##    print "turn"
 ##    print "addr: %s" % addr
 ##    print "stuff: %s" % stuff
 
-def sample_handler():
+##def drive_handler(addr, tags, stuff, source):
+##    global count_triplet
+##    global movement_triplet
+##    count_triplet, movement_triplet = \
+##            count_movements(count_triplet, movement_triplet,
+##                            drive = int(stuff[0]))
+##    
+####    print "drive"
+####    print "addr: %s" % addr
+####    print "stuff: %s" % stuff
+##
+####
+##def strafe_handler(addr, tags, stuff, source):
+##    global count_triplet
+##    global movement_triplet
+##    count_triplet, movement_triplet = \
+##            count_movements(count_triplet, movement_triplet,
+##                            strafe = int(stuff[0]))
+##
+####    print "strafe"
+####    print "addr: %s" % addr
+####    print "stuff: %s" % stuff
+##    
+##def turn_handler(addr, tags, stuff, source):
+##    global count_triplet
+##    global movement_triplet
+##    count_triplet, movement_triplet = \
+##            count_movements(count_triplet, movement_triplet,
+##                            turn = int(stuff[0]))
+##    print "turn"
+##    print "addr: %s" % addr
+##    print "stuff: %s" % stuff
+
+#does nothing but prevents error
+def sample_handler(addr, tag, stuff, source):
     h = 1
 
 ##s.addMsgHandler("/print", printing_handler) # adding our function
@@ -234,36 +264,41 @@ while True:
 
 ######SERIAL RECEIVE SENSOR -> JSON
 ###
-    time.sleep(.005)
+    time.sleep(.1)
 #    data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
 #    j_sensor = json.loads(data)
-###
+  
 #############################
-#    print ser_controller.readline()
+    
+    print "\nGETTING HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    #print ser_controller.readline()
 ######SERIAL WRITE CONTROLLER
 ###
 ### Check if the time_delta has elapsed
-    if (time.time() - last_avg_timestamp) > time_delta:
-        movement_triplet = \
-            avg_movement(count_triplet, movement_triplet)
-	print movement_triplet
-        s_movement = {"drive":movement_triplet[0],
-                      "strafe":movement_triplet[1],
-                      "turn":movement_triplet[2]}
-        j_movement = json.dumps(s_movement)
-	print s_movement
+##    if (time.time() - last_avg_timestamp) > time_delta:
+##        movement_triplet = \
+##            avg_movement(count_triplet, movement_triplet)
+##	print movement_triplet
+
+##      s_movement = {"drive":movement_triplet[0],
+##                      "strafe":movement_triplet[1],
+##                      "turn":movement_triplet[2]}
+    s_movement = {"drive":drive, "strafe":strafe,"turn":turn}
+    j_movement = json.dumps(s_movement)
+    print s_movement
+    print j_movement
 
         ##SERIAL SEND CONTROLLER
        # j_movement = decision_engine.sensor_filter(j_sensor,j_osc)
 
-        #ser_controller..write(j_movement)
+    #ser_controller.write(j_movement)
 
-        ##Reset Counts
-        count_triplet = [0,0,0]
-        movement_triplet = [0,0,0]
-        
-        ##Reset Time Stamp
-        last_avg_timestamp = time.time()
+##        ##Reset Counts
+##        count_triplet = [0,0,0]
+##        movement_triplet = [0,0,0]
+##        
+##        ##Reset Time Stamp
+##        last_avg_timestamp = time.time()
 
 ###
 ###############################
