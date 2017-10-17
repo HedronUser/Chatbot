@@ -60,15 +60,15 @@ SoftwareSerial  SerialPort1(RX2_PIN, TX2_PIN);
 SoftwareSerial  SerialPort2(RX3_PIN, TX3_PIN);
 
 KangarooSerial  K1(SerialPort1);
-KangarooSerial  K2(SerialPort2);
+//KangarooSerial  K2(SerialPort2);
 
 
 // Initialize our Kangroo objects. The named channels (1, 2, 3, or 4) must be configured on
 // the Kangroo itself. This will require using the Describe software as well as a USB to TTL
 // cable. 
 // http://www.dimensionengineering.com/info/describe
-KangarooChannel KR1(K2, '1', 128); // used to be '3'
-KangarooChannel KR2(K2, '2', 128); // used to be '4'
+KangarooChannel KR1(K1, '1', 129); // used to be '3' and 128
+KangarooChannel KR2(K1, '2', 129); // used to be '4' and 128
 
 KangarooChannel KF1(K1, '1', 128);
 KangarooChannel KF2(K1, '2', 128);
@@ -103,14 +103,18 @@ OPERATION_STATES operationState = WIFI, prev_operationState = RC;
 // RETURNS: none
 // ****************************************************
 void setup() {
-  Serial.begin(9600);  //debug output for teensy controller and also input for USB controls sent from Pi
-  SerialPort1.begin(9600);   // Initialize our Serial to 115200. 
-  SerialPort2.begin(9600);   // Initialize our Serial to 115200. 
+  Serial.begin(115200);  //debug output for teensy controller and also input for USB controls sent from Pi
 
+  SerialPort1.begin(9600);   // . // //temporarily ganged both drivers for debugging purposes. 
+
+  //SerialPort1.setTimeout(50);
+
+  SerialPort2.begin(9600);   //receiving port from RPi temporarily for debug purposes 
   //Serial.listen();      //not sure why this listen command is commented out
   // the most reliable baud rate to the kangaroo according to SuperDroid
+  SerialPort2.setTimeout(50);
                           // kangaroos are default at 9600
-//   Serial.print("Serial comms opened");
+   Serial.print("Serial comms opened");
 
   // Start each Kangaroo channel. The commented ".wait()" command
   // holds the program until init has completed. This is not necessary
@@ -126,7 +130,7 @@ void setup() {
   KF2.start();
   KF2.home();//.wait();
  
-// Serial.print("Motor drivers started up");
+ Serial.print("Motor drivers started up");
 
 //K1.serialTimeout(1000); // If we don't send anything to the Kangaroo for 1 second (1000 ms),
                           // it will abort and hold position (if the last command was position)
@@ -158,8 +162,6 @@ void setup() {
 
 }
 
-
-
 //create globals for RF values
  float driveVal =  0;
  float turnVal = 0;
@@ -169,6 +171,12 @@ void setup() {
  float driveWifiVal = 0;
  float turnWifiVal = 0;
  float strafeWifiVal = 0;
+
+//create globals to store wifi stuff
+ int mappedmotorFR = 0; //these spinning backwards
+ int mappedmotorFL = 0; //FL
+ int mappedmotorRR = 0; //these spinning backwards //RL
+ int mappedmotorRL = 0; //
 
 // const size_t bufferSize = JSON_OBJECT_SIZE(3) + 50; //from https://bblanchon.github.io/ArduinoJson/assistant/
 
@@ -191,7 +199,7 @@ void loop() {
       }
 
       //-- ACTIONS --//
-
+      
       // Check if we're receiving packets
       bool packetReceived = getWifiData(); //getWifiData returns true if data is collected, this isn't set up
       if (packetReceived) {
@@ -203,7 +211,8 @@ void loop() {
       checkRxTimeout();
 
       // Command Motors
-
+      //commandMotorsWifi();
+ 
       //-- TRANSITIONS --//
       // Check RC MODE input
       DRIVE_PULSE_WIDTH = pulseIn(drivePinRC, HIGH);//, PULSEIN_TIMEOUT); //  if width > 1500 it moves forward
@@ -275,16 +284,6 @@ void loop() {
     //  int motorRR = (driveVal + turnVal - strafeVal);
     //  int motorFL = -1*(driveVal - turnVal - strafeVal);
     //  int motorRL = (driveVal - turnVal + strafeVal); 
-    //
-    //  int mappedmotorFR = map(motorFR, -1, 1, 300, -300); //these spinning backwards
-    //  int mappedmotorFL = map(motorFL, -1, 1, -300, 300); //FL
-    //  int mappedmotorRR = map(motorRR, -1, 1, -300, 300); //these spinning backwards //RL
-    //  int mappedmotorRL = map(motorRL, -1, 1, 300, -300); //
-    
-    
-      // command motors for sabertooth driver only- need to port this to kangas
-    //  ST1.motor(1,motorFL); ST1.motor(2,motorFR);
-    //  ST2.motor(1,motorRR); ST2.motor(2,motorRL);
     
     // command motors for kangaroo drivers
         KF1.s(mappedmotorFL); //motor '1'
@@ -328,10 +327,15 @@ void loop() {
   }
   prev_operationState = operationState;
   operationState = next_operationState;
-  
-  //delay(5);
 }
 
+//void commandMotorsWifi(void){
+//    // command motors for kangaroo drivers
+//    KF1.s(mappedmotorFL); //motor '1'
+//    KF2.s(mappedmotorFR); //motor '2'   
+//    KR1.s(mappedmotorRL); //motor '3'
+//    KR2.s(mappedmotorRR); //motor '4'
+//}
   
 
 void powerOff(void){
@@ -352,48 +356,82 @@ void checkRxTimeout(void)
 }
 
 bool getWifiData(void){
-  
-
-  //DynamicJsonBuffer jsonBuffer(bufferSize);
-  StaticJsonBuffer<200> jsonBuffer;
-  
-  const char* json = "{\"drive\":0,\"strafe\":0,\"turn\":0}";
-  
-  JsonObject& root = jsonBuffer.parseObject(json);
-//  //JsonObject& root = jsonBugger.createObject(json);
-//
-//  // Test if parsing succeeds.
-  if (!root.success()) {
-    Serial.println("parseObject() failed");
-    return false;
-  }
-
-   //false values to send over serial {"drive":0.5,"strafe":0.3,"turn":0.2}
-  //bind parsed dictionary keys to local variables
- driveWifiVal = root["drive"];
- turnWifiVal = root["turn"];
- strafeWifiVal = root["strafe"];
-
-//DEBUG print variables
-  Serial.println();
-  Serial.print("Drive WIFI:");
-  Serial.print(driveWifiVal);
-  Serial.println();
-  Serial.print("Turn WIFI:");
-  Serial.print(turnWifiVal);
-  Serial.println();
-  Serial.print("Strafe WIFI:");
-  Serial.print(strafeWifiVal);
-  Serial.println();
-  
-//if (Serial.available() > 0) {
-//                // read the incoming byte:
-//  { inData = Serial.readStringUntil('\n');
-//    Serial.println("data: "+inData);
-//
-//     inData = ""; //clears buffer
-//  }
-  return true;
+    char inByte = ' ';
+    
+    if (SerialPort2.available()){  
+    char inByte = SerialPort2.read();
+    Serial.print("Print the Inbyte");
+    Serial.println(inByte);
+    
+    ////consider increasing buffer to 1024...
+    //  StaticJsonBuffer<20000> jsonBuffer;
+    //
+    //  JsonObject& root = jsonBuffer.parseObject(SerialPort2);
+    //
+    //  // Test if parsing succeeds.
+    //  if (!root.success()) {
+    //    Serial.println("parseObject() failed");
+    //    return false;
+    //  }
+    
+       //false values to send over serial {"drive":0.5,"strafe":0.3,"turn":0.2}
+      //bind parsed dictionary keys to local variables
+    //  float driveWifiVal = root["d"];
+    //  float turnWifiVal = root["t"];
+    //  float strafeWifiVal = root["s"];
+     
+      int motorFR = -1*convertFloatToByte(driveVal + turnVal + strafeVal);
+      int motorRR = convertFloatToByte(driveVal + turnVal - strafeVal);
+      int motorFL = -1*convertFloatToByte(driveVal - turnVal - strafeVal);
+      int motorRL = convertFloatToByte(driveVal - turnVal + strafeVal);  
+      
+      
+      int mappedmotorFR = map(motorFR, -127, 127, 300, -300); //these spinning backwards
+      int mappedmotorFL = map(motorFL, -127, 127, -300, 300); //FL
+      int mappedmotorRR = map(motorRR, -127, 127, -300, 300); //these spinning backwards //RL
+      int mappedmotorRL = map(motorRL, -127, 127, 300, -300); //
+      
+      //  int motorFR = -1*(driveVal + turnVal + strafeVal);
+      //  int motorRR = (driveVal + turnVal - strafeVal);
+      //  int motorFL = -1*(driveVal - turnVal - strafeVal);
+      //  int motorRL = (driveVal - turnVal + strafeVal); 
+      
+      // command motors for kangaroo drivers
+        KF1.s(mappedmotorFL); //motor '1'
+        KF2.s(mappedmotorFR); //motor '2'   
+        KR1.s(mappedmotorRL); //motor '3'
+        KR2.s(mappedmotorRR); //motor '4'
+    //DEBUG print variables
+      Serial.println();
+      Serial.print("Drive WIFI:");
+      Serial.print(driveWifiVal);
+      Serial.println();
+      Serial.print("Turn WIFI:");
+      Serial.print(turnWifiVal);
+      Serial.println();
+      Serial.print("Strafe WIFI:");
+      Serial.print(strafeWifiVal);
+      Serial.println();
+      Serial.print("Motor FR:");
+      Serial.print(motorFR);
+      Serial.println();
+      Serial.print("Motor FL");
+      Serial.print(motorFL);
+      Serial.println();
+      Serial.print("Mapped Motor FR:");
+      Serial.print(mappedmotorFR);
+      Serial.println();
+        
+    //if (Serial.available() > 0) {
+    //                // read the incoming byte:
+    //  { inData = Serial.readStringUntil('\n');
+    //    Serial.println("data: "+inData);
+    //
+    //     inData = ""; //clears buffer
+    //  }
+    //}
+      return true;
+     }
 }
   
 float convertRCtoFloat(unsigned long pulseWidth)
@@ -410,6 +448,7 @@ float convertRCtoFloat(unsigned long pulseWidth)
 
 int convertFloatToByte(float value)
 {
+  //converts from range -1,1 to range -127 to 127
   float checkVal = mByte*value + bByte; // y = mx + b 
   checkVal = checkVal < -127 ? -127 : checkVal; //sets a lower limit on what the value can be
   checkVal = checkVal >  127 ?  127 : checkVal; // sets an upper limit

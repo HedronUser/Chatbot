@@ -1,4 +1,5 @@
 #include <Servo.h>
+#include <SoftwareSerial.h> //this is needed for alternate serial pin designations on Teensy 3
 
 Servo myServo;
 byte servoPin = 8;
@@ -23,7 +24,9 @@ boolean newDataFromPC = false;
 char messageFromPC[buffSize] = {0};
 int newFlashInterval = 0;
 float servoFraction = 0.0; // fraction of servo range to move
-
+#define TX3_PIN 8
+#define RX3_PIN 7
+SoftwareSerial  SerialPort2(RX3_PIN, TX3_PIN);
 
 unsigned long curMillis;
 
@@ -33,8 +36,7 @@ unsigned long replyToPCinterval = 1000;
 //=============
 
 void setup() {
-  Serial.begin(9600);
-  
+  SerialPort2.begin(9600);
     // flash LEDs so we know we are alive
   for (byte n = 0; n < numLEDs; n++) {
      pinMode(ledPin[n], OUTPUT);
@@ -51,7 +53,7 @@ void setup() {
   moveServo();
   
     // tell the PC we are ready
-  Serial.println("<Arduino is ready>");
+  SerialPort2.println("<Arduino is ready>");
 }
 
 //=============
@@ -72,9 +74,9 @@ void getDataFromPC() {
 
     // receive data from PC and save it into inputBuffer
     
-  if(Serial.available() > 0) {
+  if(SerialPort2.available() > 0) {
 
-    char x = Serial.read();
+    char x = SerialPort2.read();
 
       // the order of these IF clauses is significant
       
@@ -125,17 +127,17 @@ void replyToPC() {
 
   if (newDataFromPC) {
     newDataFromPC = false;
-    Serial.print("<Msg ");
-    Serial.print(messageFromPC);
-    Serial.print(" NewFlash ");
-    Serial.print(newFlashInterval);
-    Serial.print(" SrvFrac ");
-    Serial.print(servoFraction);
-    Serial.print(" SrvPos ");
-    Serial.print(newServoPos);
-    Serial.print(" Time ");
-    Serial.print(curMillis >> 9); // divide by 512 is approx = half-seconds
-    Serial.println(">");
+    SerialPort2.print("<Msg ");
+    SerialPort2.print(messageFromPC);
+    SerialPort2.print(" NewFlash ");
+    SerialPort2.print(newFlashInterval);
+    SerialPort2.print(" SrvFrac ");
+    SerialPort2.print(servoFraction);
+    SerialPort2.print(" SrvPos ");
+    SerialPort2.print(newServoPos);
+    SerialPort2.print(" Time ");
+    SerialPort2.print(curMillis >> 9); // divide by 512 is approx = half-seconds
+    SerialPort2.println(">");
   }
 }
 
