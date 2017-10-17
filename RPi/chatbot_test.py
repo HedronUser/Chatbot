@@ -47,7 +47,7 @@ if "ARDUINO_CONTROLLER_PATH" in os.environ:
     port = os.environ["ARDUINO_CONTROLLER_PATH"]
 
 ### SET ARDUINO SERIAL BAUDRATE
-baudrate = 9600
+baudrate = 57600
 ##
 #####END COMMS VARIABLES#####
 
@@ -89,6 +89,10 @@ time.sleep(2)
 
 ###
 #############################
+
+startMarker = 254
+endMarker = 255
+specialByte = 253
 
 
 
@@ -266,6 +270,160 @@ st.start()
 time.sleep(.1)
 ###
 ########################
+#=====================================
+
+#  Serial send Function Definitions
+
+#=====================================
+
+def sendToArduino(sendStr):
+  global startMarker, endMarker
+  txLen = chr(len(sendStr))
+  adjSendStr = encodeHighBytes(sendStr)
+  adjSendStr = chr(startMarker) + txLen + adjSendStr + chr(endMarker)
+  ser_controller.write(adjSendStr)
+
+
+#======================================
+
+def recvFromArduino():
+  global startMarker, endMarker
+  
+  ck = ""
+  x = "z" # any value that is not an end- or startMarker
+  byteCount = -1 # to allow for the fact that the last increment will be one too many
+  
+  # wait for the start character
+  while  ord(x) != startMarker: 
+    x = ser_controller.read()
+  
+  # save data until the end marker is found
+  while ord(x) != endMarker:
+    ck = ck + x 
+    x = ser_controller.read()
+    byteCount += 1
+    
+  # save the end marker byte
+  ck = ck + x 
+  
+  returnData = []
+  returnData.append(ord(ck[1]))
+  returnData.append(decodeHighBytes(ck))
+#  print "RETURNDATA " + str(returnData[0])
+  
+  return(returnData)
+
+#======================================
+
+def encodeHighBytes(inStr):
+  global specialByte
+  
+  outStr = ""
+  s = len(inStr)
+  
+  for n in range(0, s):
+    x = ord(inStr[n])
+    
+    if x >= specialByte:
+       outStr = outStr + chr(specialByte)
+       outStr = outStr + chr(x - specialByte)
+    else:
+       outStr = outStr + chr(x)
+       
+#  print "encINSTR  " + bytesToString(inStr)
+#  print "encOUTSTR " + bytesToString(outStr)
+
+  return(outStr)
+
+
+#======================================
+
+def decodeHighBytes(inStr):
+
+  global specialByte
+  
+  outStr = ""
+  n = 0
+  
+  while n < len(inStr):
+     if ord(inStr[n]) == specialByte:
+        n += 1
+        x = chr(specialByte + ord(inStr[n]))
+     else:
+        x = inStr[n]
+     outStr = outStr + x
+     n += 1
+     
+  print "decINSTR  " + bytesToString(inStr)
+  print "decOUTSTR " + bytesToString(outStr)
+
+  return(outStr)
+
+
+#======================================
+
+def displayData(data):
+
+  n = len(data) - 3
+
+  print "NUM BYTES SENT->   " + str(ord(data[1]))
+  print "DATA RECVD BYTES-> " + bytesToString(data[2:-1])
+  print "DATA RECVD CHARS-> " + data[2: -1]
+
+
+#======================================
+
+def bytesToString(data):
+
+  byteString = ""
+  n = len(data)
+  
+  for s in range(0, n):
+    byteString = byteString + str(ord(data[s]))
+    byteString = byteString + "-"
+    
+  return(byteString)
+
+
+#======================================
+
+def displayDebug(debugStr):
+
+   n = len(debugStr) - 3
+   print "DEBUG MSG-> " + debugStr[2: -1]
+
+
+#============================
+
+def waitForArduino():
+
+   # wait until the Arduino sends 'Arduino Ready' - allows time for Arduino reset
+   # it also ensures that any bytes left over from a previous message are discarded
+   
+    global endMarker
+    
+    msg = ""
+    while msg.find("Arduino Ready") == -1:
+
+      while ser_controller.inWaiting() == 0:
+        x = 'z'
+
+      # then wait until an end marker is received from the Arduino to make sure it is ready to proceed
+      x = "z"
+      while ord(x) != endMarker: # gets the initial debugMessage
+        x = ser_controller.read()
+        msg = msg + x
+
+
+      displayDebug(msg)
+      print
+      
+waitForArduino()
+
+
+print "Arduino Ready"
+
+
 
 #############
 #Begin Loops#
@@ -277,13 +435,13 @@ while True:
 
 ######SERIAL RECEIVE SENSOR -> JSON
 ###
-    time.sleep(.1)
+#    time.sleep(.1)
 #    data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
 #    j_sensor = json.loads(data)
   
 #############################
     
-    print "\nGETTING HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+##    print "\nGETTING HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     #print ser_controller.readline()
 ######SERIAL WRITE CONTROLLER
 ###
@@ -297,14 +455,13 @@ while True:
 ##                      "strafe":movement_triplet[1],
 ##                      "turn":movement_triplet[2]}
     s_movement = {"d":round(drive,3), "s":round(strafe,3),"t":round(turn,3)}
-    j_movement = json.dumps(s_movement)
+##    j_movement = json.dumps(s_movement)
     print s_movement
-    print j_movement
-
+##    print j_movement
     ##SERIAL SEND CONTROLLER
 #    j_movement = decision_engine.sensor_filter(j_sensor,j_osc)
     #ser_controller.write(s_movement)
-    ser_controller.write(j_movement)
+##    ser_controller.write(j_movement)
     #ser_controller.write("drive")
     #print "sent message"
 
@@ -317,6 +474,36 @@ while True:
 
 ###
 ###############################
+
+    testData = []
+    testData.append("d" + str(round(drive, 3))) #a
+    testData.append("s" + str(round(strafe, 3)))
+    testData.append("t" + str(round(turn, 3)))
+
+    teststr1 = testData[0]
+    teststr2 = testData[1]
+    teststr3 = testData[2]
+
+    sendToArduino(teststr1)
+    sendToArduino(teststr2)
+    sendToArduino(teststr3)
+    
+    print teststr1
+    print teststr2    
+    print teststr3
+
+##      if ser_controller.inWaiting > 0
+##        dataRecvd = recvFromArduino()
+##
+##        if dataRecvd[0] == 0:
+##          displayDebug(dataRecvd[1])
+##
+##        if dataRecvd[0] > 0:
+##          displayData(dataRecvd[1])
+##          print "Reply Received"
+##          n += 1s
+
+    time.sleep(0.3)
 
 
 
