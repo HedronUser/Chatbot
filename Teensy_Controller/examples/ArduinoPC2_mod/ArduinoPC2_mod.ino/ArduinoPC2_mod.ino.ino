@@ -36,6 +36,8 @@ boolean inProgress = false;
 boolean startFound = false;
 boolean allReceived = false;
 
+float driveWifiVal = 0;
+
 //================
 
 void setup() {
@@ -101,25 +103,48 @@ void getSerialPort2Data() {
 //============================
 
 void processData() {
-
     // processes the data that is in dataRecvd[]
 
   if (allReceived) {
   
-      // for demonstration just copy dataRecvd to dataSend
-    dataSendCount = dataRecvCount;
+      // for demonstration just print dataRecvd
     for (byte n = 0; n < dataRecvCount; n++) {
-           Serial.print(dataRecvd[n]);
-        
 
-    }
+
+           Serial.print(n);
+           Serial.print(":  ");
+           Serial.print(int(char(dataRecvd[n])));
+           Serial.println();
+    
+      }
+//      else if(int(char(dataRecvd[n])) == 115){
+//        //strafe channel
+//        strafeWifiVal = int(char(dataRecvd[n+2]))
+//      }    
+//      else if(int(char(dataRecvd[n])) == 116){
+//        //turn channel
+//        turnWifiVal = int(char(dataRecvd[n+3]))
+//      }
+
+    
+    
+    
+    //}
 
 //    dataToPC();
     delay(100);
     allReceived = false; 
   }
 }
-
+int combine(int x, int y)
+{
+    int z;
+    if(y >= 10)
+        x *= 10;
+    x *= 10;
+    z = x + y;
+    return z;
+}
 //============================
 
 void decodeHighBytes() {
@@ -137,40 +162,6 @@ void decodeHighBytes() {
     }
     dataRecvd[dataRecvCount] = x;
     dataRecvCount ++;
-  }
-}
-
-//====================
-
-void dataToPC() {
-
-      // expects to find data in dataSend[]
-      //   uses encodeHighBytes() to copy data to tempBuffer
-      //   sends data to PC from tempBuffer
-    encodeHighBytes();
-
-    SerialPort2.write(startMarker);
-    SerialPort2.write(dataSendCount);
-    SerialPort2.write(tempBuffer, dataTotalSend);
-    SerialPort2.write(endMarker);
-}
-
-//============================
-
-void encodeHighBytes() {
-  // Copies to temBuffer[] all of the data in dataSend[]
-  //  and converts any bytes of 253 or more into a pair of bytes, 253 0, 253 1 or 253 2 as appropriate
-  dataTotalSend = 0;
-  for (byte n = 0; n < dataSendCount; n++) {
-    if (dataSend[n] >= specialByte) {
-      tempBuffer[dataTotalSend] = specialByte;
-      dataTotalSend++;
-      tempBuffer[dataTotalSend] = dataSend[n] - specialByte;
-    }
-    else {
-      tempBuffer[dataTotalSend] = dataSend[n];
-    }
-    dataTotalSend++;
   }
 }
 
