@@ -131,7 +131,7 @@ def runTest(td):
 
       print "==========="
 
-    time.sleep(5)
+    time.sleep(.01)
 
 
 #======================================
@@ -141,34 +141,113 @@ def runTest(td):
 #======================================
 
 import serial
-import time
+import time, threading
+import OSC
+import os
 
 print
 print
 
 # NOTE the user must ensure that the serial port and baudrate are correct
-serPort = "/dev/ttyS80"
+#serPort = "/dev/serial0" #plugged into UART on pi
+serPort = "/dev/ttyACM0" #plugged directly into USB port on Pi
+
 baudRate = 9600
 ser = serial.Serial(serPort, baudRate)
 print "Serial port " + serPort + " opened  Baudrate " + str(baudRate)
 
+##VARIABLES
+
+
+drive = 0
+strafe = 0
+turn = 0
 
 startMarker = 60
 endMarker = 62
 
+receive_address = '192.168.1.52', 9000
+
+# OSC Server. there are three different types of server.
+
+s = OSC.OSCServer(receive_address) # basic
+
+s.addDefaultHandlers()
+
+def drive_handler(addr, tags, stuff, source):
+    global drive
+    drive = stuff[0]
+    
+##    print "drive"
+##    print "addr: %s" % addr
+##    print "stuff: %s" % stuff
+
+##
+def strafe_handler(addr, tags, stuff, source):
+    global strafe
+    strafe = stuff[0]
+
+
+##    print "strafe"
+##    print "addr: %s" % addr
+##    print "stuff: %s" % stuff
+    
+def turn_handler(addr, tags, stuff, source):
+    global turn
+    turn = stuff[0]
+    
+##    print "turn"
+##    print "addr: %s" % addr
+##    print "stuff: %s" % stuff
+#does nothing but prevents error
+
+def sample_handler(addr, tag, stuff, source):
+    h = 1
+
+##s.addMsgHandler("/print", printing_handler) # adding our function
+s.addMsgHandler("/drive", drive_handler)
+s.addMsgHandler("/strafe", strafe_handler)
+s.addMsgHandler("/turn", turn_handler)
+s.addMsgHandler("/_samplerate", sample_handler)
+
+
+# just checking which handlers we have added
+print "Registered Callback-functions are :"
+for addr in s.getOSCAddressSpace():
+    print addr
+
+# Start OSCServer
+print "\nStarting OSCServer. Use ctrl-C to quit."
+st = threading.Thread( target = s.serve_forever )
+st.start()
+
+
+
+time.sleep(.1)
 
 waitForArduino()
 
-
-testData = []
-testData.append("<LED1,200,0.2>")
-testData.append("<LED1,800,0.7>")
-testData.append("<LED2,800,0.5>")
-testData.append("<LED2,200,0.2>")
-testData.append("<LED1,200,0.7>")
-
-runTest(testData)
+while True:
+  testData = []
+  testData.append("<drive,127," + str(drive) + ">")
 
 
-ser.close
+  runTest(testData)
+
+
+try :
+    while 1 :
+        time.sleep(5)
+
+except KeyboardInterrupt :
+    print "\nClosing OSCServer."
+    s.close()
+    print "\nClosing SerialPort."
+    ser.close
+
+    print "Waiting for Server-thread to finish"
+    st.join() ##!!!
+    print "Done"
+
+
 

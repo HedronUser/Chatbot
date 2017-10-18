@@ -32,7 +32,7 @@ import decision_engine
 #### SET DEFAULT ARDUINO DEVICE PATHS
 #port_sensor = "/dev/ttyACM0"
 #port_controller = "/dev/ttyAMA0"
-port_controller = "/dev/ttyS0"
+port_controller = "/dev/serial0"
 #port_controller = "/dev/ttyACM1" #not sure which one
 
 
@@ -81,7 +81,7 @@ try :
 
 except SerialException:
     print "Could not connect to device"
-    port_controller = "/dev/serial0" #not sure which one
+    port_controller = "/dev/ttyS0" #not sure which one
     ser_controller = setup_serial(port_controller, baudrate)
 
 #give time for arduino to setup comms
@@ -418,10 +418,10 @@ def waitForArduino():
       displayDebug(msg)
       print
       
-waitForArduino()
-
-
-print "Arduino Ready"
+##waitForArduino()
+##
+##
+##print "Arduino Ready"
 
 
 
@@ -454,9 +454,9 @@ while True:
 ##      s_movement = {"drive":movement_triplet[0],
 ##                      "strafe":movement_triplet[1],
 ##                      "turn":movement_triplet[2]}
-    s_movement = {"d":round(drive,3), "s":round(strafe,3),"t":round(turn,3)}
+##    s_movement = {"d":round(drive,3), "s":round(strafe,3),"t":round(turn,3)}
 ##    j_movement = json.dumps(s_movement)
-    print s_movement
+##    print s_movement
 ##    print j_movement
     ##SERIAL SEND CONTROLLER
 #    j_movement = decision_engine.sensor_filter(j_sensor,j_osc)
@@ -476,21 +476,15 @@ while True:
 ###############################
 
     testData = []
-    testData.append("d" + str(round(drive, 3))) #a
-    testData.append("s" + str(round(strafe, 3)))
-    testData.append("t" + str(round(turn, 3)))
+    testData.append("drive, " + str(round(drive, 3))) #a
+    testData.append("strafe, " + str(round(strafe, 3)))
+    testData.append("turn, " + str(round(turn, 3)))
 
-    teststr1 = testData[0]
-    teststr2 = testData[1]
-    teststr3 = testData[2]
 
-    sendToArduino(teststr1)
-    sendToArduino(teststr2)
-    sendToArduino(teststr3)
+    sendToArduino(testData)
     
-    print teststr1
-    print teststr2    
-    print teststr3
+ 
+    print testData
 
 ##      if ser_controller.inWaiting > 0
 ##        dataRecvd = recvFromArduino()
@@ -503,7 +497,7 @@ while True:
 ##          print "Reply Received"
 ##          n += 1s
 
-    time.sleep(0.3)
+    time.sleep(0.1)
 
 
 

@@ -131,7 +131,7 @@ def runTest(td):
 
       print "==========="
 
-    time.sleep(5)
+    time.sleep(.01)
 
 
 #======================================
@@ -147,7 +147,9 @@ print
 print
 
 # NOTE the user must ensure that the serial port and baudrate are correct
-serPort = "/dev/ttyS80"
+#serPort = "/dev/serial0" #plugged into UART on pi
+serPort = "/dev/ttyACM0" #plugged directly into USB port on Pi
+
 baudRate = 9600
 ser = serial.Serial(serPort, baudRate)
 print "Serial port " + serPort + " opened  Baudrate " + str(baudRate)
@@ -159,15 +161,17 @@ endMarker = 62
 
 waitForArduino()
 
+while True:
+  testData = []
+  testData.append("<LED1,200,0.2>")
+  testData.append("<LED1,800,0.7>")
+  testData.append("<LED2,800,0.5>")
+  testData.append("<drive,127,-0.9151>")
+  testData.append("<turn,-127,0.58>")
+  testData.append("<strafe,-127,0.1>")
+  testData.append("<LED1,200,0.7>")
 
-testData = []
-testData.append("<LED1,200,0.2>")
-testData.append("<LED1,800,0.7>")
-testData.append("<LED2,800,0.5>")
-testData.append("<LED2,200,0.2>")
-testData.append("<LED1,200,0.7>")
-
-runTest(testData)
+  runTest(testData)
 
 
 ser.close
