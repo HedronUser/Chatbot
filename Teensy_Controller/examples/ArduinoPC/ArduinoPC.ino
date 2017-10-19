@@ -6,10 +6,6 @@
 //   if the number of bytes is 0 the PC will assume a debug string and just print it to the screen
 
 //================
-#include <SoftwareSerial.h> //this is needed for alternate serial pin designations on Teensy 3
-#define TX3_PIN 8
-#define RX3_PIN 7
-SoftwareSerial  SerialPort2(RX3_PIN, TX3_PIN);
 
 #define startMarker 254
 #define endMarker 255
@@ -40,12 +36,9 @@ boolean allReceived = false;
 
 void setup() {
   pinMode(13, OUTPUT); // the onboard LED
-  SerialPort2.begin(57600);
-  Serial.begin(9600);
-  delay(1000);
-
+  Serial.begin(57600);
   debugToPC("Arduino Ready from ArduinoPC.ino");
-  //Serial.print("sent ready message");
+  
   delay(500);
   blinkLED(5); // just so we know it's alive
 }
@@ -54,7 +47,7 @@ void setup() {
 
 void loop() {
 
-  getSerialPort2Data();
+  getSerialData();
   
   processData();
 
@@ -62,7 +55,7 @@ void loop() {
 
 //================
 
-void getSerialPort2Data() {
+void getSerialData() {
 
      // Receives data into tempBuffer[]
      //   saves the number of bytes that the PC said it sent - which will be in tempBuffer[1]
@@ -70,9 +63,9 @@ void getSerialPort2Data() {
      
      // the Arduino program will use the data it finds in dataRecvd[]
 
-  if(SerialPort2.available() > 0) {
+  if(Serial.available() > 0) {
 
-    byte x = SerialPort2.read();
+    byte x = Serial.read();
     if (x == startMarker) { 
       bytesRecvd = 0; 
       inProgress = true;
@@ -88,8 +81,7 @@ void getSerialPort2Data() {
     if (x == endMarker) {
       inProgress = false;
       allReceived = true;
-      //debugToPC("end received");
-
+      
         // save the number of bytes that were sent
       dataSentNum = tempBuffer[1];
   
@@ -109,12 +101,11 @@ void processData() {
       // for demonstration just copy dataRecvd to dataSend
     dataSendCount = dataRecvCount;
     for (byte n = 0; n < dataRecvCount; n++) {
-           Serial.print(dataRecvd[n]);
-        
-
+       dataSend[n] = dataRecvd[n];
     }
 
-//    dataToPC();
+    dataToPC();
+
     delay(100);
     allReceived = false; 
   }
@@ -149,10 +140,10 @@ void dataToPC() {
       //   sends data to PC from tempBuffer
     encodeHighBytes();
 
-    SerialPort2.write(startMarker);
-    SerialPort2.write(dataSendCount);
-    SerialPort2.write(tempBuffer, dataTotalSend);
-    SerialPort2.write(endMarker);
+    Serial.write(startMarker);
+    Serial.write(dataSendCount);
+    Serial.write(tempBuffer, dataTotalSend);
+    Serial.write(endMarker);
 }
 
 //============================
@@ -178,20 +169,20 @@ void encodeHighBytes() {
 
 void debugToPC( char arr[]) {
     byte nb = 0;
-    SerialPort2.write(startMarker);
-    SerialPort2.write(nb);
-    SerialPort2.print(arr);
-    SerialPort2.write(endMarker);
+    Serial.write(startMarker);
+    Serial.write(nb);
+    Serial.print(arr);
+    Serial.write(endMarker);
 }
 
 //=========================
 
 void debugToPC( byte num) {
     byte nb = 0;
-    SerialPort2.write(startMarker);
-    SerialPort2.write(nb);
-    SerialPort2.print(num);
-    SerialPort2.write(endMarker);
+    Serial.write(startMarker);
+    Serial.write(nb);
+    Serial.print(num);
+    Serial.write(endMarker);
 }
 
 //=========================

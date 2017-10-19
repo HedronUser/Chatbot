@@ -1,11 +1,5 @@
-#include <Servo.h>
-
-Servo myServo;
-byte servoPin = 8;
-byte servoMin = 10;
-byte servoMax = 170;
-byte servoPos = 0;
-byte newServoPos = servoMin;
+//Experiment based on ArduinoPC2
+//http://forum.arduino.cc/index.php?topic=225329.0
 
 const byte numLEDs = 2;
 byte ledPin[numLEDs] = {12, 13};
@@ -30,25 +24,28 @@ unsigned long curMillis;
 unsigned long prevReplyToPCmillis = 0;
 unsigned long replyToPCinterval = 1000;
 
-//=============
+//=============Create some globals to store wifi data
+
+float driveWifiVal = 0;
+float strafeWifiVal = 0;
+float turnWifiVal = 0;
+
+
 
 void setup() {
-  Serial.begin(9600);
-  
+  Serial.begin(9600); //comms to pi
+    
     // flash LEDs so we know we are alive
   for (byte n = 0; n < numLEDs; n++) {
      pinMode(ledPin[n], OUTPUT);
      digitalWrite(ledPin[n], HIGH);
   }
-  delay(500); // delay() is OK in setup as it only happens once
+  
+  delay(5000); // delay() is OK in setup as it only happens once
   
   for (byte n = 0; n < numLEDs; n++) {
      digitalWrite(ledPin[n], LOW);
   }
-  
-    // initialize the servo
-  myServo.attach(servoPin);
-  moveServo();
   
     // tell the PC we are ready
   Serial.println("<Arduino is ready>");
@@ -59,11 +56,9 @@ void setup() {
 void loop() {
   curMillis = millis();
   getDataFromPC();
-  updateFlashInterval();
-  updateServoPos();
+  updateVariable();
   replyToPC();
   flashLEDs();
-  moveServo();
 }
 
 //=============
@@ -122,17 +117,21 @@ void parseData() {
 //=============
 
 void replyToPC() {
-
+//this function is called AFTER the updateFlashInterval (Legacy) updateVariable()
   if (newDataFromPC) {
     newDataFromPC = false;
     Serial.print("<Msg ");
     Serial.print(messageFromPC);
-    Serial.print(" NewFlash ");
+    Serial.print(" Integer Val ");
     Serial.print(newFlashInterval);
-    Serial.print(" SrvFrac ");
+    Serial.print(" Float Val ");
     Serial.print(servoFraction);
-    Serial.print(" SrvPos ");
-    Serial.print(newServoPos);
+    Serial.print(" Received Drive ");
+    Serial.print(driveWifiVal);
+    Serial.print(" Received Strafe ");
+    Serial.print(strafeWifiVal);
+    Serial.print(" Received Turn ");
+    Serial.print(turnWifiVal);
     Serial.print(" Time ");
     Serial.print(curMillis >> 9); // divide by 512 is approx = half-seconds
     Serial.println(">");
@@ -141,34 +140,20 @@ void replyToPC() {
 
 //============
 
-void updateFlashInterval() {
+void updateVariable() {
 
-   // this illustrates using different inputs to call different functions
-  if (strcmp(messageFromPC, "LED1") == 0) {
-     updateLED1();
+   // this illustrates using different inputs to call different functions  
+  if (strcmp(messageFromPC, "drive") == 0) {
+     driveWifiVal = servoFraction;
   }
   
-  if (strcmp(messageFromPC, "LED2") == 0) {
-     updateLED2();
+  if (strcmp(messageFromPC, "strafe") == 0) {
+     strafeWifiVal = servoFraction;
   }
-}
-
-//=============
-
-void updateLED1() {
-
-  if (newFlashInterval > 100) {
-    LEDinterval[0] = newFlashInterval;
+    if (strcmp(messageFromPC, "turn") == 0) {
+     turnWifiVal = servoFraction;
   }
-}
 
-//=============
-
-void updateLED2() {
-
-  if (newFlashInterval > 100) {
-    LEDinterval[1] = newFlashInterval;
-  }
 }
 
 //=============
@@ -183,21 +168,6 @@ void flashLEDs() {
   }
 }
 
-//=============
-
-void updateServoPos() {
-
-  byte servoRange = servoMax - servoMin;
-  if (servoFraction >= 0 && servoFraction <= 1) {
-    newServoPos = servoMin + ((float) servoRange * servoFraction);
-  }
-}
 
 //=============
 
-void moveServo() {
-  if (servoPos != newServoPos) {
-    servoPos = newServoPos;
-    myServo.write(servoPos);
-  }
-}
