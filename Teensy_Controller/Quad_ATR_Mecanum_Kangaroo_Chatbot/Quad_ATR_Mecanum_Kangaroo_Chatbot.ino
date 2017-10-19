@@ -362,7 +362,7 @@ float convertRCtoFloat(unsigned long pulseWidth)
   return checkVal;
 }
 
-char convertFloatToByte(float value)
+int convertFloatToByte(float value)
 {
   float checkVal = mByte*value + bByte; // y = mx + b 
   checkVal = checkVal < -127 ? -127 : checkVal; //sets a lower limit on what the value can be
