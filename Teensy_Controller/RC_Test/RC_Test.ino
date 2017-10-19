@@ -87,10 +87,10 @@ void loop() {
     int mappedmotorRR = map(motorRR, -127, 127, -300, 300); //these spinning backwards //RL
     int mappedmotorRL = map(motorRL, -127, 127, 300, -300); //
 
-    Serial.print("FR: ");   printFourDigit(motorFR);  
-    Serial.print("\tRR: "); printFourDigit(motorRR);
-    Serial.print("\tFL: "); printFourDigit(motorFL);  
-    Serial.print("\tRL: "); printFourDigit(motorRL);
+    Serial.print("FR: ");   printFourDigit(mappedmotorFR);  
+    Serial.print("\tRR: "); printFourDigit(mappedmotorRR);
+    Serial.print("\tFL: "); printFourDigit(mappedmotorFL);  
+    Serial.print("\tRL: "); printFourDigit(mappedmotorRL);
     Serial.println("");
   }
 }
