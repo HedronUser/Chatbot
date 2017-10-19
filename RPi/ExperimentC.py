@@ -249,7 +249,6 @@ while True:
 
   runTest(testData)
 
-
 try :
     while 1 :
         time.sleep(5)
