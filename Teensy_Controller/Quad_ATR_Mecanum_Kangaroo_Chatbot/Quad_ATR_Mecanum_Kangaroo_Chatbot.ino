@@ -60,7 +60,7 @@ SoftwareSerial  SerialPort1(RX2_PIN, TX2_PIN);
 SoftwareSerial  SerialPort2(RX3_PIN, TX3_PIN);
 
 KangarooSerial  K1(SerialPort1);
-//KangarooSerial  K2(SerialPort2);
+KangarooSerial  K2(SerialPort2);
 
 
 // Initialize our Kangroo objects. The named channels (1, 2, 3, or 4) must be configured on
@@ -70,8 +70,8 @@ KangarooSerial  K1(SerialPort1);
 KangarooChannel KR1(K1, '1', 129); // used to be '3' and 128
 KangarooChannel KR2(K1, '2', 129); // used to be '4' and 128
 
-KangarooChannel KF1(K1, '1', 128);
-KangarooChannel KF2(K1, '2', 128);
+KangarooChannel KF1(K2, '1', 128);
+KangarooChannel KF2(K2, '2', 128);
 
 // RC mappings -- strafe: aileron, drive: elevation, turn: rudder
 int strafePinRC = 3, drivePinRC = 2, turnPinRC = 4;
