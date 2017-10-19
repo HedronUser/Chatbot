@@ -116,7 +116,7 @@ def runTest(td):
 
     if waitingForReply == False:
       sendToArduino(teststr)
-      print "Sent from PC -- LOOP NUM " + str(n) + " TEST STR " + teststr
+      #print "Sent from PC -- LOOP NUM " + str(n) + " TEST STR " + teststr
       waitingForReply = True
 
     if waitingForReply == True:
@@ -129,8 +129,6 @@ def runTest(td):
       n += 1
       waitingForReply = False
 
-      print "==========="
-
     time.sleep(.01)
 
 
@@ -141,6 +139,9 @@ def runTest(td):
 #======================================
 
 import serial
+from serial import SerialException
+import json
+
 import time, threading
 import OSC
 import os
@@ -151,9 +152,21 @@ print
 # NOTE the user must ensure that the serial port and baudrate are correct
 #serPort = "/dev/serial0" #plugged into UART on pi
 serPort = "/dev/ttyACM0" #plugged directly into USB port on Pi
+altSerPort = "/dev/ttyACM1" #plugged directly into USB port on Pi
 
 baudRate = 9600
-ser = serial.Serial(serPort, baudRate)
+
+try :
+    ser = serial.Serial(serPort, baudRate)
+
+
+except SerialException:
+    print "Could not connect to device"
+    serPort = altSerPort
+    ser = serial.Serial(serPort, baudRate)
+
+
+
 print "Serial port " + serPort + " opened  Baudrate " + str(baudRate)
 
 ##VARIABLES
@@ -230,6 +243,8 @@ waitForArduino()
 while True:
   testData = []
   testData.append("<drive,127," + str(drive) + ">")
+  testData.append("<strafe,127," + str(strafe) + ">")
+  testData.append("<turn,127," + str(turn) + ">")
 
 
   runTest(testData)
