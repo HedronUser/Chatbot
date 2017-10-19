@@ -9,7 +9,7 @@ const int modePrintFwdBack = 0;
 const int modeSerialDelayTest = 1;
 
 // Set the current testing mode to one of the options declared above
-int mode = modeSerialDelayTest;
+int mode = modePrintFwdBack;
 
 // If sending takes over this amount of time, report it in serial delay test mode
 long DELAYED_SEND_THRESHOLD_MILLIS = 40;
