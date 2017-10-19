@@ -19,13 +19,13 @@ SoftwareSerial  SerialPort1(RX2_PIN, TX2_PIN);
 SoftwareSerial  SerialPort2(RX3_PIN, TX3_PIN);
 
 KangarooSerial  K1(SerialPort1);
-//KangarooSerial  K2(SerialPort2);
+KangarooSerial  K2(SerialPort2);
 
 KangarooChannel KR1(K1, '1', 129); // used to be '3' and 128
 KangarooChannel KR2(K1, '2', 129); // used to be '4' and 128
 
-KangarooChannel KF1(K1, '1', 128);
-KangarooChannel KF2(K1, '2', 128);
+KangarooChannel KF1(K2, '1', 128);
+KangarooChannel KF2(K2, '2', 128);
 
 // *********************
 // RC Vars
@@ -162,14 +162,17 @@ void setup() {
 void loop() {
   curMillis = millis();
   getDataFromPC();
+
+  //set flag for update when buffer is full
   updateVariable();
+  //could also parse data at this point
+
+  
   replyToPC();
   flashLEDs();
 
+//should only get called when finished fully parsing
 //insert wifi/bot control code
-
-
-
   if((curMillis - prevReplyToPCmillis) > replyToPCinterval){
     commandMotors(driveWifiVal, turnWifiVal, strafeWifiVal);
     counter = counter + 1;
@@ -194,7 +197,7 @@ void commandMotors(float driveWifiVal, float turnWifiVal, float strafeWifiVal){
       
       // command motors for kangaroo drivers
     KF1.s(mappedmotorFL); //motor '1'
-//    KF2.s(mappedmotorFR); //motor '2'   
+    KF2.s(mappedmotorFR); //motor '2'   
 //    KR1.s(mappedmotorRL); //motor '3'
 //    KR2.s(mappedmotorRR); //motor '4'
 }
@@ -282,7 +285,7 @@ void replyToPC() {
 //============
 
 void updateVariable() {
-
+//this could be changed
    // this illustrates using different inputs to call different functions  
   if (strcmp(messageFromPC, "drive") == 0) {
      driveWifiVal = servoFraction;
@@ -342,6 +345,7 @@ float convertRCtoFloat(unsigned long pulseWidth)
 int convertFloatToByte(float value)
 //this function has been changed to convert a float [-1,1] to int [-127, 127]
 {
+ 
   //converts from range -1,1 to range -127 to 127
   float checkVal = mByte*value + bByte; // y = mx + b 
   checkVal = checkVal < -127 ? -127 : checkVal; //sets a lower limit on what the value can be
