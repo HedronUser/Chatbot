@@ -9,7 +9,7 @@ const int modePrintFwdBack = 0;
 const int modeSerialDelayTest = 1;
 
 // Set the current testing mode to one of the options declared above
-int mode = modePrintFwdBack;
+int mode = modeSerialDelayTest;
 
 // If sending takes over this amount of time, report it in serial delay test mode
 long DELAYED_SEND_THRESHOLD_MILLIS = 40;
@@ -167,7 +167,7 @@ void handlePrintFwdBackTest() {
     // toggle drive direction
     isForward = !isForward;
 
-    delay(3000);
+    delay(1500);
 }
 
 void handleSerialDelayTest() {
