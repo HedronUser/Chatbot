@@ -120,7 +120,7 @@ int convertFloatToByte(float value)
     return checkVal;
 }
 
-// Print leading 0s - currently only working for positive numbers
+// Print leading 0s
 void printFourDigit(int val) 
 {
     if (val < 0) Serial.print('-');
