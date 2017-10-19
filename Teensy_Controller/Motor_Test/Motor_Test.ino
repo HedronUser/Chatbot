@@ -4,6 +4,18 @@
 #include <Kangaroo.h>
 #include <SoftwareSerial.h> //this is needed for alternate serial pin designations on Teensy 3
 
+// mode options
+const int modePrintFwdBack = 0;
+const int modeSerialDelayTest = 1;
+
+// Set the current testing mode to one of the options declared above
+int mode = modeSerialDelayTest;
+
+// If sending takes over this amount of time, report it in serial delay test mode
+long DELAYED_SEND_THRESHOLD_MILLIS = 40;
+
+int baud = 9600;
+
 // ****************************************************
 // Motor Controller Initialization
 // ****************************************************
@@ -50,9 +62,9 @@ bool isForward = true;
 // RETURNS: none
 // ****************************************************
 void setup() {
-  Serial.begin(9600);  //debug output for teensy controller and also input for USB controls sent from Pi
-  SerialPort1.begin(9600);   // Initialize our Serial to 115200. This seems to be
-  SerialPort2.begin(9600);   // Initialize our Serial to 115200. This seems to be
+  Serial.begin(baud);  //debug output for teensy controller and also input for USB controls sent from Pi
+  SerialPort1.begin(baud);   // Initialize our Serial to 115200. This seems to be
+  SerialPort2.begin(baud);   // Initialize our Serial to 115200. This seems to be
 
   //Serial.listen();      //not sure why this listen command is commented out
   // the most reliable baud rate to the kangaroo according to SuperDroid
@@ -95,6 +107,21 @@ void setup() {
 // RETURNS: none
 // ****************************************************
 void loop() {
+
+    switch (mode) {
+        case modePrintFwdBack:
+          handlePrintFwdBackTest();
+          break;
+        case modeSerialDelayTest:
+          handleSerialDelayTest();
+          break;
+        default: 
+          Serial.print("Invalid test mode: "); Serial.println(mode);
+          break;
+    }
+}
+
+void handlePrintFwdBackTest() {
 
     int val;
     String fwdBackMsg;
@@ -141,6 +168,43 @@ void loop() {
     isForward = !isForward;
 
     delay(3000);
+}
+
+void handleSerialDelayTest() {
+   
+    int val = random(-300, 301);
+
+    // send 1
+    long beforeSendTime = millis();
+    KF1.s(val); //motor '1' 
+    handleDelayedSendReport(beforeSendTime, "1");   
+
+    // send 2
+    beforeSendTime = millis();
+    KF2.s(val); //motor '2'   
+    handleDelayedSendReport(beforeSendTime, "2"); 
+
+    // send 3
+    beforeSendTime = millis();
+    KR1.s(val); //motor '3'
+    handleDelayedSendReport(beforeSendTime, "3"); 
+
+    // send 4
+    beforeSendTime = millis();
+    KR2.s(val); //motor '4'
+    handleDelayedSendReport(beforeSendTime, "4");
+
+    // short delay only for this test
+    delay(10);
+}
+
+void handleDelayedSendReport(long beforeSendTime, String motorID) {
+    long duration = millis() - beforeSendTime;
+    // If the duration was over the threshold, report it
+    if (duration >= DELAYED_SEND_THRESHOLD_MILLIS) {
+        Serial.print("Detected delayed send to motor "); Serial.print(motorID); Serial.print(" of: "); Serial.println(duration);
+        Serial.println("\n--------------------------\n");
+    }
 }
 
 
