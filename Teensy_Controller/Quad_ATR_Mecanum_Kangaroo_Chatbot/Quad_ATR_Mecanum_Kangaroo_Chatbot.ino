@@ -66,11 +66,16 @@ KangarooSerial  K2(SerialPort2);
 // the Kangroo itself. This will require using the Describe software as well as a USB to TTL
 // cable. 
 // http://www.dimensionengineering.com/info/describe
+<<<<<<< Updated upstream
 KangarooChannel KR1(K2, '1', 128); // used to be '3'
 KangarooChannel KR2(K2, '2', 128); // used to be '4'
+=======
+KangarooChannel KR1(K1, '1', 129); // used to be '3'
+KangarooChannel KR2(K1, '2', 129); // used to be '4'
+>>>>>>> Stashed changes
 
-KangarooChannel KF1(K1, '1', 128);
-KangarooChannel KF2(K1, '2', 128);
+KangarooChannel KF1(K2, '1', 128);
+KangarooChannel KF2(K2, '2', 128);
 
 // RC mappings -- strafe: aileron, drive: elevation, turn: rudder
 int strafePinRC = 3, drivePinRC = 2, turnPinRC = 4;
@@ -176,8 +181,13 @@ void loop() {
 
   // convert RC signals to continuous values from [-1,1]
   float driveVal = convertRCtoFloat(DRIVE_PULSE_WIDTH);
+<<<<<<< Updated upstream
   float turnVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
   float strafeVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
+=======
+  float strafeVal  = -1*convertRCtoFloat(TURN_PULSE_WIDTH);
+  float turnVal = convertRCtoFloat(STRAFE_PULSE_WIDTH);
+>>>>>>> Stashed changes
   
   // convert the [-1,1] values to bytes in range [-127,127] for sabertooths
   //this also appears to be mixing the values in order to drive each wheel correctly
@@ -370,8 +380,13 @@ char convertFloatToByte(float value)
 //  Serial.print(checkVal);
 //  Serial.print(" ");
 
+<<<<<<< Updated upstream
   char returnVal = (char)(checkVal);
   return returnVal;
+=======
+//  char returnVal = (char)(checkVal);
+  return checkVal;
+>>>>>>> Stashed changes
 }
 
 
