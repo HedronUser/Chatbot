@@ -154,7 +154,7 @@ print
 serPort = "/dev/ttyACM0" #plugged directly into USB port on Pi
 altSerPort = "/dev/ttyACM1" #plugged directly into USB port on Pi
 
-baudRate = 9600
+baudRate = 115200
 
 try :
     ser = serial.Serial(serPort, baudRate)
