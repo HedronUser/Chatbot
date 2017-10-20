@@ -42,6 +42,7 @@ bool IS_VERBOSE_RESPONSE = false;
 float CONTROL_DEAD_BAND_MIN = -0.1;
 float CONTROL_DEAD_BAND_MAX = 0.1;
 
+// Globally the last-received control values
 float driveVal = 0;
 float strafeVal = 0;
 float turnVal = 0;
@@ -105,15 +106,6 @@ unsigned long prevReplyToPCmillis = 0;
 unsigned long replyToPCinterval = 100; // 100ms command interval
 
 //=============Create some globals to store wifi data
-
-
-
-//create globals to store wifi stuff
- int mappedmotorFR = 0; //these spinning backwards
- int mappedmotorFL = 0; //FL
- int mappedmotorRR = 0; //these spinning backwards //RL
- int mappedmotorRL = 0; //
-
 
 void setup() {
   Serial.begin(115200); //comms to pi
