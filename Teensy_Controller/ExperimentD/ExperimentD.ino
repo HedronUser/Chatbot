@@ -28,6 +28,17 @@ KangarooChannel KF1(K2, '1', 128);
 KangarooChannel KF2(K2, '2', 128);
 
 // *********************
+// CONTROL_VARIABLES
+// *********************
+// Ignore control signals inside the dead band
+float CONTROL_DEAD_BAND_MIN = -0.1;
+float CONTROL_DEAD_BAND_MAX = 0.1;
+
+float driveVal = 0;
+float strafeVal = 0;
+float turnVal = 0;
+
+// *********************
 // RC Vars
 // *********************
 unsigned long DRIVE_PULSE_WIDTH;
@@ -42,11 +53,6 @@ float mFloat = 0, bFloat = 0;
 int strafePinRC = 3, drivePinRC = 2, turnPinRC = 4;
 int strafeSignal5Vpin = 6;
 int eStopPin = 5;
-
-//create globals for RF values
-float driveVal =  0;
-float turnVal = 0;
-float strafeVal = 0;
 
 // ****************************************************
 // Wifi Variables
@@ -92,9 +98,7 @@ unsigned long replyToPCinterval = 100; // 100ms command interval
 
 //=============Create some globals to store wifi data
 
-float driveWifiVal = 0;
-float strafeWifiVal = 0;
-float turnWifiVal = 0;
+
 
 //create globals to store wifi stuff
  int mappedmotorFR = 0; //these spinning backwards
@@ -104,9 +108,9 @@ float turnWifiVal = 0;
 
 
 void setup() {
-  Serial.begin(9600); //comms to pi
-  SerialPort1.begin(9600);   // . // //temporarily ganged both drivers for debugging purposes. 
-  SerialPort2.begin(9600);   // going to hook back up to the motor drivers
+  Serial.begin(115200); //comms to pi
+  SerialPort1.begin(115200);   // . // //temporarily ganged both drivers for debugging purposes. 
+  SerialPort2.begin(115200);   // going to hook back up to the motor drivers
     // flash LEDs so we know we are alive
   for (byte n = 0; n < numLEDs; n++) {
      pinMode(ledPin[n], OUTPUT);
@@ -174,20 +178,24 @@ void loop() {
 //should only get called when finished fully parsing
 //insert wifi/bot control code
   if((curMillis - prevReplyToPCmillis) > replyToPCinterval){
-    commandMotors(driveWifiVal, turnWifiVal, strafeWifiVal);
+    commandMotors(driveVal, turnVal, strafeVal);
     counter = counter + 1;
     prevReplyToPCmillis = curMillis;
   }
 
 }
 
-void commandMotors(float driveWifiVal, float turnWifiVal, float strafeWifiVal){
+void commandMotors(float driveVal, float turnVal, float strafeVal){
 //-- ACTIONS --//
 
-    int motorFR = -1*convertFloatToByte(driveWifiVal + turnWifiVal + strafeWifiVal);
-    int motorRR = convertFloatToByte(driveWifiVal + turnWifiVal - strafeWifiVal);
-    int motorFL = -1*convertFloatToByte(driveWifiVal - turnWifiVal - strafeWifiVal);
-    int motorRL = convertFloatToByte(driveWifiVal - turnWifiVal + strafeWifiVal);  
+    float filteredDrive = deadBandFilter(driveVal);
+    float filteredTurn = deadBandFilter(turnVal);
+    float filteredStrafe = deadBandFilter(strafeVal);    
+    
+    int motorFR = -1*convertFloatToByte(filteredDrive + filteredTurn + filteredStrafe);
+    int motorRR = convertFloatToByte(filteredDrive + filteredTurn - filteredStrafe);
+    int motorFL = -1*convertFloatToByte(filteredDrive - filteredTurn - filteredStrafe);
+    int motorRL = convertFloatToByte(filteredDrive - filteredTurn + filteredStrafe);  
     
     
     int mappedmotorFR = map(motorFR, -127, 127, 300, -300); //these spinning backwards
@@ -198,8 +206,8 @@ void commandMotors(float driveWifiVal, float turnWifiVal, float strafeWifiVal){
       // command motors for kangaroo drivers
     KF1.s(mappedmotorFL); //motor '1'
     KF2.s(mappedmotorFR); //motor '2'   
-//    KR1.s(mappedmotorRL); //motor '3'
-//    KR2.s(mappedmotorRR); //motor '4'
+    KR1.s(mappedmotorRL); //motor '3'
+    KR2.s(mappedmotorRR); //motor '4'
 }
 
 //=============
@@ -269,11 +277,11 @@ void replyToPC() {
     Serial.print(" Float Val ");
     Serial.print(servoFraction);
     Serial.print(" Received Drive ");
-    Serial.print(driveWifiVal);
+    Serial.print(driveVal);
     Serial.print(" Received Strafe ");
-    Serial.print(strafeWifiVal);
+    Serial.print(strafeVal);
     Serial.print(" Received Turn ");
-    Serial.print(turnWifiVal);
+    Serial.print(turnVal);
     Serial.print("Counter");
     Serial.print(counter);
     Serial.print(" Time ");
@@ -288,14 +296,14 @@ void updateVariable() {
 //this could be changed
    // this illustrates using different inputs to call different functions  
   if (strcmp(messageFromPC, "drive") == 0) {
-     driveWifiVal = servoFraction;
+     driveVal = servoFraction;
   }
   
   if (strcmp(messageFromPC, "strafe") == 0) {
-     strafeWifiVal = servoFraction;
+     strafeVal = servoFraction;
   }
     if (strcmp(messageFromPC, "turn") == 0) {
-     turnWifiVal = servoFraction;
+     turnVal = servoFraction;
   }
 
 }
@@ -324,6 +332,19 @@ void checkRxTimeout(void)
   Serial.print("rXtimeout");
   Serial.println();
   return;
+}
+
+//=============
+
+float deadBandFilter(float val)
+{
+    // if it's outside of the dead band, just return the value
+    if (val < CONTROL_DEAD_BAND_MIN || val > CONTROL_DEAD_BAND_MAX) {
+        return val;
+    }
+
+    // it's in the dead-band, so return 0
+    return 0;
 }
 
 //=============
