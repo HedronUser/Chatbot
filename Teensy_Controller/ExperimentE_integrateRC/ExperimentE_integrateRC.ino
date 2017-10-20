@@ -42,7 +42,7 @@ bool IS_VERBOSE_RESPONSE = false;
 float CONTROL_DEAD_BAND_MIN = -0.1;
 float CONTROL_DEAD_BAND_MAX = 0.1;
 
-// Globally the last-received control values
+// Store the last-received control values
 float driveVal = 0;
 float strafeVal = 0;
 float turnVal = 0;
@@ -50,10 +50,7 @@ float turnVal = 0;
 // *********************
 // RC Vars
 // *********************
-unsigned long DRIVE_PULSE_WIDTH;
-unsigned long TURN_PULSE_WIDTH;
-unsigned long STRAFE_PULSE_WIDTH;
-float pulseLow = 1051, pulseHigh = 1890;
+float RC_PULSE_LOW = 1051, RC_PULSE_HIGH = 1890;
 
 float mByte = 0, bByte = 0;
 float mFloat = 0, bFloat = 0;
@@ -140,7 +137,7 @@ void setup() {
    // set estop pin as input and pull high
   pinMode(eStopPin,INPUT); 
 
- // Set our input pins for RF as such 
+ // Set our input pins for RC as such 
   pinMode(turnPinRC, INPUT); 
   pinMode(drivePinRC, INPUT);
   pinMode(strafePinRC, INPUT);
@@ -150,8 +147,8 @@ void setup() {
   digitalWrite(strafeSignal5Vpin, HIGH);
   
   // slope/intercept for converting RC signal to range [-1,1]
-  mFloat = (float)2 / (pulseHigh - pulseLow);
-  bFloat = -1*pulseLow*mFloat;
+  mFloat = (float)2 / (RC_PULSE_HIGH - RC_PULSE_LOW);
+  bFloat = -1*RC_PULSE_LOW*mFloat;
   
   // slope/intercept for converting [-1,1] to [-127,127]
   mByte = (float)255 / (1 -  0);
@@ -362,7 +359,7 @@ float deadBandFilter(float val)
 float convertRCtoFloat(unsigned long pulseWidth)
 {
   // deadband - to increase the deadband adjust first value (1450) down and second value (1550) up
-  if(pulseWidth > 1450 && pulseWidth < 1550) { pulseWidth = (float)(pulseHigh + pulseLow) / 2; }
+  if(pulseWidth > 1450 && pulseWidth < 1550) { pulseWidth = (float)(RC_PULSE_HIGH + RC_PULSE_LOW) / 2; }
   
   float checkVal = mFloat*pulseWidth + bFloat - 1;
   checkVal = checkVal < -1 ? -1 : checkVal;
