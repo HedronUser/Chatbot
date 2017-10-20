@@ -51,12 +51,19 @@ float turnVal = 0;
 // RC Vars
 // *********************
 float RC_PULSE_LOW = 1051, RC_PULSE_HIGH = 1890;
+// If RC pulse values are all below this minimum, there is no RC control present
+unsigned long RC_ACTIVE_PULSE_MINIMUM = 500;
+unsigned long RC_PULSEIN_TIMEOUT_MICROS = 30000;
 
 float mByte = 0, bByte = 0;
 float mFloat = 0, bFloat = 0;
 
+unsigned long rcDrivePulseWidth;
+unsigned long rcTurnPulseWidth;
+unsigned long rcStrafePulseWidth;
+
 // RC mappings -- strafe: aileron, drive: elevation, turn: rudder
-int strafePinRC = 3, drivePinRC = 2, turnPinRC = 4;
+int turnPinRC = 3, drivePinRC = 2, strafePinRC = 4;
 int strafeSignal5Vpin = 6;
 int eStopPin = 5;
 
@@ -70,7 +77,7 @@ int rxTimeoutTime = 10;  //1 second timeout on 10 Hz timer
 //Not goi
 //track input source
 enum OPERATION_STATES{ WIFI = 0, RC = 1 };
-OPERATION_STATES operationState = WIFI, prev_operationState = RC;
+OPERATION_STATES operationState = RC;
 
 // ****************************************************
 // Serial Comm Variables (wifi stuff)
@@ -87,7 +94,7 @@ const char startMarker = '<';
 const char endMarker = '>';
 byte bytesRecvd = 0;
 boolean readInProgress = false;
-boolean newDataFromPC = false;
+boolean newData = false;
 
 char messageFromPC[buffSize] = {0};
 int newFlashInterval = 0;
@@ -162,21 +169,28 @@ void setup() {
 
 void loop() {
   curMillis = millis();
-  getDataFromPC();
 
-  //set flag for update when buffer is full
-  updateVariable();
-  //could also parse data at this point
+  // Handle operation mode update between WIFI/RC
+  updateOperationState();
+
+  // In wifi mode, update the variables from the PC
+  if (operationState == WIFI) {
+    getDataFromPC();
+    //set flag for update when buffer is full
+    updateVariable();
+  } else {
+    getDataFromRC();
+  }
 
   // In verbose mode, log every loop
-  if (IS_VERBOSE_RESPONSE && newDataFromPC) {
+  if (IS_VERBOSE_RESPONSE && newData) {
     replyToPC();  
   }
+  
   flashLEDs();
 
-//should only get called when finished fully parsing
-//insert wifi/bot control code
-  if((curMillis - prevReplyToPCmillis) > replyToPCinterval){
+  // Commands motors and replys to PC on fixed interval if there's new data*/
+  if(newData && (curMillis - prevReplyToPCmillis) > replyToPCinterval){
     replyToPC();
     commandMotors(driveVal, turnVal, strafeVal);
     counter = counter + 1;
@@ -184,7 +198,42 @@ void loop() {
   }
 
   // Reset this flag, since any new data has been handled
-  newDataFromPC = false;
+  newData = false;
+}
+
+void updateOperationState() {
+    // first, update the RC pulse widths
+    updateRCPulseWidths();
+
+    // check if there's an RC signal present
+    bool hasRCSignalNow = hasRCSignal();
+    
+    if (operationState == RC) {
+        if (!hasRCSignalNow) {
+            sendMsgToPC("RC signal lost - powering off and switching to WIFI control mode");
+            powerOff(); // turn off motors
+            operationState = WIFI;
+        }
+    } else {
+        // operation state WIFI
+        if (hasRCSignalNow) {
+            sendMsgToPC("RC signal detected - switching to RC control");
+            operationState = RC;
+        }
+    }
+}
+
+void updateRCPulseWidths() {
+    rcDrivePulseWidth = pulseIn(drivePinRC, HIGH, RC_PULSEIN_TIMEOUT_MICROS);
+    rcTurnPulseWidth  = pulseIn(turnPinRC, HIGH, RC_PULSEIN_TIMEOUT_MICROS);
+    rcStrafePulseWidth  = pulseIn(strafePinRC, HIGH, RC_PULSEIN_TIMEOUT_MICROS);
+}
+
+bool hasRCSignal() {
+    return  rcDrivePulseWidth > RC_ACTIVE_PULSE_MINIMUM &&
+            rcTurnPulseWidth > RC_ACTIVE_PULSE_MINIMUM &&
+            rcStrafePulseWidth > RC_ACTIVE_PULSE_MINIMUM;
+    
 }
 
 void commandMotors(float driveVal, float turnVal, float strafeVal){
@@ -205,12 +254,12 @@ void commandMotors(float driveVal, float turnVal, float strafeVal){
     int mappedmotorRR = mapMotorValue(motorRR, false);
     int mappedmotorRL = mapMotorValue(motorRL, true);
 
-    Serial.println("---- Motor commands sent ----");
-    Serial.print("FR: ");   printFourDigit(mappedmotorFR);  
-    Serial.print("\tRR: "); printFourDigit(mappedmotorRR);
-    Serial.print("\tFL: "); printFourDigit(mappedmotorFL);  
-    Serial.print("\tRL: "); printFourDigit(mappedmotorRL);
-    Serial.println("");
+    /*sendMsgToPC("---- Motor commands sent ----");
+    sendMsgToPC("FR: " + getFourDigit(mappedmotorFR));  
+    sendMsgToPC("\tRR: " + getFourDigit(mappedmotorRR));
+    sendMsgToPC("\tFL: " + getFourDigit(mappedmotorFL));  
+    sendMsgToPC("\tRL: " + getFourDigit(mappedmotorRL));
+    sendMsgToPC("");*/
       
       // command motors for kangaroo drivers
     KF1.s(mappedmotorFL); //motor '1'
@@ -224,22 +273,22 @@ void commandMotors(float driveVal, float turnVal, float strafeVal){
 
 void getDataFromPC() {
 
-    // receive data from PC and save it into inputBuffer
+  // receive data from PC and save it into inputBuffer
     
-  if(Serial.available() > 0) {
+  while (Serial.available() > 0) {
 
     char x = Serial.read();
 
-      // the order of these IF clauses is significant
+    // the order of these IF clauses is significant
       
-    if (x == endMarker) {
+    if (readInProgress && x == endMarker) {
       readInProgress = false;
-      newDataFromPC = true;
+      newData = true;
       inputBuffer[bytesRecvd] = 0;
       parseData();
     }
     
-    if(readInProgress) {
+    if (readInProgress) {
       inputBuffer[bytesRecvd] = x;
       bytesRecvd ++;
       if (bytesRecvd == buffSize) {
@@ -252,6 +301,17 @@ void getDataFromPC() {
       readInProgress = true;
     }
   }
+  
+  // don't try reading across update loops
+  readInProgress = false;
+}
+
+// ===========
+void getDataFromRC() {
+  driveVal = convertRCtoFloat(rcDrivePulseWidth);
+  strafeVal  = -1*convertRCtoFloat(rcStrafePulseWidth);
+  turnVal = convertRCtoFloat(rcTurnPulseWidth);
+  newData = true;
 }
 
 //=============
@@ -297,6 +357,11 @@ void replyToPC() {
     Serial.println(">");
 }
 
+// Sensds msg to pc with start and end characters
+void sendMsgToPC(String msg) {
+    Serial.println("<" + msg + ">");
+}
+
 //============
 
 void updateVariable() {
@@ -327,20 +392,6 @@ void flashLEDs() {
   }
 }
 
-
-//=============
-
-
-void checkRxTimeout(void)
-//not sure we need this
-{
-  if (rxTimeoutCounter >= rxTimeoutTime) { powerOff(); }
-  Serial.println();
-  Serial.print("rXtimeout");
-  Serial.println();
-  return;
-}
-
 //=============
 
 float deadBandFilter(float val)
@@ -364,7 +415,6 @@ float convertRCtoFloat(unsigned long pulseWidth)
   float checkVal = mFloat*pulseWidth + bFloat - 1;
   checkVal = checkVal < -1 ? -1 : checkVal;
   checkVal = checkVal >  1 ?  1 : checkVal;
-//  Serial.print(checkVal);
   return checkVal;
 }
 
@@ -378,8 +428,6 @@ int convertFloatToByte(float value)
   float checkVal = mByte*value + bByte; // y = mx + b 
   checkVal = checkVal < -127 ? -127 : checkVal; //sets a lower limit on what the value can be
   checkVal = checkVal >  127 ?  127 : checkVal; // sets an upper limit
-//  Serial.print(checkVal);
-//  Serial.print(" ");
 
 //  char returnVal = (char)(checkVal);
 //  return returnVal;
@@ -418,14 +466,16 @@ void powerOff(void){
 
   //=============
 
-// Print leading 0s
-void printFourDigit(int val) 
+// get val with leading 0s
+String getFourDigit(int val) 
 {
-    if (val < 0) Serial.print('-');
+    String fourDigit = "";
+    if (val < 0) fourDigit += '-';
     int absVal = abs(val);
-    if (absVal < 1000) Serial.print('0');
-    if (absVal < 100) Serial.print('0');
-    if (absVal < 10) Serial.print('0');
-    Serial.print(absVal);
+    if (absVal < 1000) fourDigit += '0';
+    if (absVal < 100) fourDigit += '0';
+    if (absVal < 10) fourDigit += '0';
+    fourDigit += absVal;
+    return fourDigit;
 }
 
