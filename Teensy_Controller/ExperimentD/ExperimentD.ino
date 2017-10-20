@@ -27,6 +27,14 @@ KangarooChannel KR2(K1, '2', 129); // used to be '4' and 128
 KangarooChannel KF1(K2, '1', 128);
 KangarooChannel KF2(K2, '2', 128);
 
+
+// *********************
+// RESPONSE_VARIABLES
+// *********************
+// If true, will respond on every loop
+// Otherwise, will respond only when control commands are issued
+bool IS_VERBOSE_RESPONSE = false;
+
 // *********************
 // CONTROL_VARIABLES
 // *********************
@@ -171,18 +179,23 @@ void loop() {
   updateVariable();
   //could also parse data at this point
 
-  
-  replyToPC();
+  // In verbose mode, log every loop
+  if (IS_VERBOSE_RESPONSE && newDataFromPC) {
+    replyToPC();  
+  }
   flashLEDs();
 
 //should only get called when finished fully parsing
 //insert wifi/bot control code
   if((curMillis - prevReplyToPCmillis) > replyToPCinterval){
+    replyToPC();
     commandMotors(driveVal, turnVal, strafeVal);
     counter = counter + 1;
     prevReplyToPCmillis = curMillis;
   }
 
+  // Reset this flag, since any new data has been handled
+  newDataFromPC = false;
 }
 
 void commandMotors(float driveVal, float turnVal, float strafeVal){
@@ -190,24 +203,32 @@ void commandMotors(float driveVal, float turnVal, float strafeVal){
 
     float filteredDrive = deadBandFilter(driveVal);
     float filteredTurn = deadBandFilter(turnVal);
-    float filteredStrafe = deadBandFilter(strafeVal);    
-    
-    int motorFR = -1*convertFloatToByte(filteredDrive + filteredTurn + filteredStrafe);
-    int motorRR = convertFloatToByte(filteredDrive + filteredTurn - filteredStrafe);
-    int motorFL = -1*convertFloatToByte(filteredDrive - filteredTurn - filteredStrafe);
-    int motorRL = convertFloatToByte(filteredDrive - filteredTurn + filteredStrafe);  
-    
-    
-    int mappedmotorFR = map(motorFR, -127, 127, 300, -300); //these spinning backwards
-    int mappedmotorFL = map(motorFL, -127, 127, -300, 300); //FL
-    int mappedmotorRR = map(motorRR, -127, 127, -300, 300); //these spinning backwards //RL
-    int mappedmotorRL = map(motorRL, -127, 127, 300, -300); //
+    float filteredStrafe = deadBandFilter(strafeVal);   
+  
+    int motorFR = -1*convertFloatToByte(filteredDrive - filteredTurn - filteredStrafe);
+    int motorRR = convertFloatToByte(filteredDrive - filteredTurn + filteredStrafe);
+    int motorFL = -1*convertFloatToByte(filteredDrive + filteredTurn + filteredStrafe);
+    int motorRL = convertFloatToByte(filteredDrive + filteredTurn - filteredStrafe);  
+
+    // if we pass true, the mapping will be flipped to prevent backwards spinning
+    int mappedmotorFR = mapMotorValue(motorFR, true);
+    int mappedmotorFL = mapMotorValue(motorFL, false);
+    int mappedmotorRR = mapMotorValue(motorRR, false);
+    int mappedmotorRL = mapMotorValue(motorRL, true);
+
+    Serial.println("---- Motor commands sent ----");
+    Serial.print("FR: ");   printFourDigit(mappedmotorFR);  
+    Serial.print("\tRR: "); printFourDigit(mappedmotorRR);
+    Serial.print("\tFL: "); printFourDigit(mappedmotorFL);  
+    Serial.print("\tRL: "); printFourDigit(mappedmotorRL);
+    Serial.println("");
       
       // command motors for kangaroo drivers
     KF1.s(mappedmotorFL); //motor '1'
     KF2.s(mappedmotorFR); //motor '2'   
     KR1.s(mappedmotorRL); //motor '3'
     KR2.s(mappedmotorRR); //motor '4'
+
 }
 
 //=============
@@ -268,8 +289,6 @@ void parseData() {
 void replyToPC() {
 //this function is called AFTER the updateFlashInterval (Legacy) updateVariable()
    
-  if (newDataFromPC) {
-    newDataFromPC = false;
     Serial.print("<Msg ");
     Serial.print(messageFromPC);
     Serial.print(" Integer Val ");
@@ -287,7 +306,6 @@ void replyToPC() {
     Serial.print(" Time ");
     Serial.print(curMillis >> 9); // divide by 512 is approx = half-seconds
     Serial.println(">");
-  }
 }
 
 //============
@@ -379,6 +397,25 @@ int convertFloatToByte(float value)
   return checkVal;
 }
 
+/**
+ * All values range from -127 to +127
+ * Some map to -300 to + 300, while others map to 300 to -300 to prevent backwards spinning
+ * If isFlipMap is true, then it'll map -127 to +300 and vice versa
+ */
+int mapMotorValue(int value, bool isFlipMap) {
+
+    // Don't run 0 values through the map, since this can result in noise
+    if (value == 0) {
+        return 0;
+    }
+
+    // flip the mapping if the flag is set
+    int minMap = isFlipMap ? 300 : -300;
+    int maxMap = isFlipMap ? -300 : 300;
+
+    return map(value, -127, 127, minMap, maxMap);
+}
+
 //=============
 
 void powerOff(void){
@@ -392,4 +429,14 @@ void powerOff(void){
 
   //=============
 
+// Print leading 0s
+void printFourDigit(int val) 
+{
+    if (val < 0) Serial.print('-');
+    int absVal = abs(val);
+    if (absVal < 1000) Serial.print('0');
+    if (absVal < 100) Serial.print('0');
+    if (absVal < 10) Serial.print('0');
+    Serial.print(absVal);
+}
 
