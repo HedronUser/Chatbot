@@ -105,8 +105,8 @@ float turnWifiVal = 0;
 
 void setup() {
   Serial.begin(9600); //comms to pi
-  SerialPort1.begin(9600);   // . // //temporarily ganged both drivers for debugging purposes. 
-  SerialPort2.begin(9600);   // going to hook back up to the motor drivers
+  SerialPort1.begin(115200);   // . // //temporarily ganged both drivers for debugging purposes. 
+  SerialPort2.begin(115200);   // going to hook back up to the motor drivers
     // flash LEDs so we know we are alive
   for (byte n = 0; n < numLEDs; n++) {
      pinMode(ledPin[n], OUTPUT);
@@ -198,8 +198,8 @@ void commandMotors(float driveWifiVal, float turnWifiVal, float strafeWifiVal){
       // command motors for kangaroo drivers
     KF1.s(mappedmotorFL); //motor '1'
     KF2.s(mappedmotorFR); //motor '2'   
-//    KR1.s(mappedmotorRL); //motor '3'
-//    KR2.s(mappedmotorRR); //motor '4'
+    KR1.s(mappedmotorRL); //motor '3'
+    KR2.s(mappedmotorRR); //motor '4'
 }
 
 //=============
