@@ -202,11 +202,8 @@ void loop() {
 }
 
 void updateOperationState() {
-    // first, update the RC pulse widths
-    updateRCPulseWidths();
-
-    // check if there's an RC signal present
-    bool hasRCSignalNow = hasRCSignal();
+    // check if there's an RC signal present - updates the RC pulse widths if RC is present
+    bool hasRCSignalNow = updateRCSignal();
     
     if (operationState == RC) {
         if (!hasRCSignalNow) {
@@ -223,16 +220,24 @@ void updateOperationState() {
     }
 }
 
-void updateRCPulseWidths() {
+/**
+ * Updates the first RC pulse width to check if there's a signal
+ * If there's no signal, returns false immediately to reduce latency
+ * If there is a signal, updates the remaining pulse width values and returns true
+ */
+bool updateRCSignal() {
+
     rcDrivePulseWidth = pulseIn(drivePinRC, HIGH, RC_PULSEIN_TIMEOUT_MICROS);
+    if (rcDrivePulseWidth < RC_ACTIVE_PULSE_MINIMUM) {
+        // there's no signal - return false immediately to reduce latency
+        return false;
+    }
+
+    // If we make it this far, there is a signal, so update the other pulse width values
     rcTurnPulseWidth  = pulseIn(turnPinRC, HIGH, RC_PULSEIN_TIMEOUT_MICROS);
     rcStrafePulseWidth  = pulseIn(strafePinRC, HIGH, RC_PULSEIN_TIMEOUT_MICROS);
-}
-
-bool hasRCSignal() {
-    return  rcDrivePulseWidth > RC_ACTIVE_PULSE_MINIMUM &&
-            rcTurnPulseWidth > RC_ACTIVE_PULSE_MINIMUM &&
-            rcStrafePulseWidth > RC_ACTIVE_PULSE_MINIMUM;
+    
+    return true;
     
 }
 
