@@ -4,6 +4,7 @@
 
 #include <Kangaroo.h>
 #include <SoftwareSerial.h> //this is needed for alternate serial pin designations on Teensy 3
+//#include <digitalWriteFast.h>
 
 // Teensy TX (pin 11) goes to Kangaroo S1
 // Teensy RX (pin 10) goes to Kangaroo S2
@@ -53,7 +54,7 @@ float turnVal = 0;
 float RC_PULSE_LOW = 1051, RC_PULSE_HIGH = 1890;
 // If RC pulse values are all below this minimum, there is no RC control present
 unsigned long RC_ACTIVE_PULSE_MINIMUM = 500;
-unsigned long RC_PULSEIN_TIMEOUT_MICROS = 30000;
+unsigned long RC_PULSEIN_TIMEOUT_MICROS = 20000; //was 30000
 
 float mByte = 0, bByte = 0;
 float mFloat = 0, bFloat = 0;
@@ -65,7 +66,13 @@ unsigned long rcStrafePulseWidth;
 // RC mappings -- strafe: aileron, drive: elevation, turn: rudder
 int turnPinRC = 3, drivePinRC = 2, strafePinRC = 4;
 int strafeSignal5Vpin = 6;
-int eStopPin = 5;
+
+// *********************
+// E-Stop Button Vars
+// *********************
+const int eStopPin = 12;
+bool isKangarooActive = false;
+bool wasKangarooActive = false;
 
 // ****************************************************
 // Wifi Variables
@@ -118,31 +125,21 @@ void setup() {
     // flash LEDs so we know we are alive
   for (byte n = 0; n < numLEDs; n++) {
      pinMode(ledPin[n], OUTPUT);
-     digitalWrite(ledPin[n], HIGH);
+     digitalWriteFast(ledPin[n], HIGH);
   }
   
   delay(5000); // delay() is OK in setup as it only happens once
   
   for (byte n = 0; n < numLEDs; n++) {
-     digitalWrite(ledPin[n], LOW);
+     digitalWriteFast(ledPin[n], LOW);
   }
   
     // tell the PC we are ready, this is necessary, basically we are plugging in the USB and have 5 seconds before this gets thrown
 
-  KR1.start();
-  KR1.home();//.wait();
-
-  KR2.start();
-  KR2.home();//.wait();
-  
-  KF1.start();
-  KF1.home();//.wait();
-
-  KF2.start();
-  KF2.home();//.wait();
+  handleKangarooSetup();
 
    // set estop pin as input and pull high
-  pinMode(eStopPin,INPUT); 
+  pinMode(eStopPin,INPUT_PULLUP); //this is hooked to a NC Estop switch with the other side of estop switch hooked to ground.
 
  // Set our input pins for RC as such 
   pinMode(turnPinRC, INPUT); 
@@ -169,7 +166,7 @@ void setup() {
 
 void loop() {
   curMillis = millis();
-
+    
   // Handle operation mode update between WIFI/RC
   updateOperationState();
 
@@ -187,18 +184,82 @@ void loop() {
     replyToPC();  
   }
   
-  flashLEDs();
+  //flashLEDs();
 
   // Commands motors and replys to PC on fixed interval if there's new data*/
   if(newData && (curMillis - prevReplyToPCmillis) > replyToPCinterval){
-    replyToPC();
-    commandMotors(driveVal, turnVal, strafeVal);
-    counter = counter + 1;
-    prevReplyToPCmillis = curMillis;
+    
+        //store the old ESTOP state
+        wasKangarooActive = isKangarooActive;
+      
+        //updates isKangarooActive based on digitalread of estoppin state
+        //this sets isKangarooActive
+        updateKangarooActive();
+      
+        if(!wasKangarooActive && isKangarooActive){
+          //kangaroo just turned back on - so call setup
+          handleKangarooSetup();
+        }
+        else if(wasKangarooActive && !isKangarooActive){
+          //kangaroo turned off
+          //Add any special handling, perhaps send a message
+          powerOff();
+        }
+        if(isKangarooActive){
+          replyToPC();
+          commandMotors(driveVal, turnVal, strafeVal);
+          counter = counter + 1;
+          prevReplyToPCmillis = curMillis;
+        }
+    }
+    // Reset this flag, since any new data has been handled
+    newData = false;
+  unsigned long afterRead = millis();
+  unsigned long timeElapsed = afterRead -  curMillis;
+//  Serial.print("Time it takes thru loop: ");
+//  Serial.println(timeElapsed);
   }
 
-  // Reset this flag, since any new data has been handled
-  newData = false;
+
+
+
+void handleKangarooSetup(void){
+  
+  KR1.start();
+  KR1.home();//.wait();
+
+  KR2.start();
+  KR2.home();//.wait();
+  
+  KF1.start();
+  KF1.home();//.wait();
+
+  KF2.start();
+  KF2.home();//.wait();
+
+  isKangarooActive = true;
+  
+}
+
+//============
+
+void updateKangarooActive(void){
+  isKangarooActive = checkKangarooPinState();
+}
+
+//============
+
+bool checkKangarooPinState(void){
+  bool state = digitalReadFast(eStopPin);
+  if(state == false){
+    //if NC estop switch not pressed return true
+    return true;
+  }
+  else if(state == true){
+    //if NC estop switch is pressed pullup is active and return false
+    return false;
+  }
+  
 }
 
 void updateOperationState() {
@@ -236,7 +297,7 @@ bool updateRCSignal() {
     // If we make it this far, there is a signal, so update the other pulse width values
     rcTurnPulseWidth  = pulseIn(turnPinRC, HIGH, RC_PULSEIN_TIMEOUT_MICROS);
     rcStrafePulseWidth  = pulseIn(strafePinRC, HIGH, RC_PULSEIN_TIMEOUT_MICROS);
-    
+
     return true;
     
 }
@@ -364,7 +425,6 @@ void replyToPC() {
 
 // Sensds msg to pc with start and end characters
 void sendMsgToPC(String msg) {
-    Serial.println("<" + msg + ">");
 }
 
 //============
@@ -392,7 +452,7 @@ void flashLEDs() {
   for (byte n = 0; n < numLEDs; n++) {
     if (curMillis - prevLEDmillis[n] >= LEDinterval[n]) {
        prevLEDmillis[n] += LEDinterval[n];
-       digitalWrite( ledPin[n], ! digitalRead( ledPin[n]) );
+       digitalWriteFast( ledPin[n], ! digitalReadFast( ledPin[n]) );
     }
   }
 }
