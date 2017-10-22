@@ -256,35 +256,32 @@ activeTeensy = 0
 time.sleep(.1)
 
 
-while True:
-  if activeTeensy == 0:
-    while(serialconnect() == 0):
-      pass
-
-    waitForArduino()
-    print "teensy inactive"
-
-  testData = []
-  testData.append("<drive,127," + str(drive) + ">")
-  testData.append("<strafe,127," + str(strafe) + ">")
-  testData.append("<turn,127," + str(turn) + ">")
-
-  while True:
-    try:
-        driver = runTest(testData)
-        break
-    except SerialException:
-        activeTeensy = 0
-        print "serial exception"
-        time.sleep(1)
-        break
-
-
-
 
 try :
     while 1 :
-        time.sleep(5)
+
+      if activeTeensy == 0:
+        while(serialconnect() == 0):
+          pass
+
+        waitForArduino()
+        print "teensy inactive"
+
+      testData = []
+      testData.append("<drive,127," + str(drive) + ">")
+      testData.append("<strafe,127," + str(strafe) + ">")
+      testData.append("<turn,127," + str(turn) + ">")
+
+      while True:
+        try:
+            driver = runTest(testData)
+            break
+        except SerialException:
+            activeTeensy = 0
+            print "serial exception"
+            time.sleep(1)
+            break
+
 
 except KeyboardInterrupt :
     print "\nClosing OSCServer."
