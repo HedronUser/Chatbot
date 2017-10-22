@@ -57,13 +57,14 @@
 #=====================================
 
 def sendToArduino(sendStr):
+  global ser
   ser.write(sendStr)
 
 
 #======================================
 
 def recvFromArduino():
-  global startMarker, endMarker
+  global startMarker, endMarker, ser
   
   ck = ""
   x = "z" # any value that is not an end- or startMarker
@@ -90,19 +91,27 @@ def waitForArduino():
    # wait until the Arduino sends 'Arduino Ready' - allows time for Arduino reset
    # it also ensures that any bytes left over from a previous message are discarded
    
-    global startMarker, endMarker
+    global startMarker, endMarker, activeTeensy, ser
     
     msg = ""
     while msg.find("Arduino is ready") == -1:
+      try:
 
-      while ser.inWaiting() == 0:
-        pass
+          while ser.inWaiting() == 0:
+            print "ser.inwaiting passed"
+          
+  
+          msg = recvFromArduino()
+
+          print msg
+          print
+          activeTeensy = 1
+      except IOError:
+          msg = ""
+          activeTeensy = 0 
+          print "ioerror"
+          return
         
-      msg = recvFromArduino()
-
-      print msg
-      print
-      
 #======================================
 
 def runTest(td):
@@ -153,21 +162,29 @@ print
 #serPort = "/dev/serial0" #plugged into UART on pi
 serPort = "/dev/ttyACM0" #plugged directly into USB port on Pi
 altSerPort = "/dev/ttyACM1" #plugged directly into USB port on Pi
-
 baudRate = 115200
+ser = None
 
-try :
-    ser = serial.Serial(serPort, baudRate)
+def serialconnect():
+  global baudrate, ser
+  serPort = "/dev/ttyACM0" #plugged directly into USB port on Pi
+  altSerPort = "/dev/ttyACM1" #plugged directly into USB port on Pi
+  
+  try :
+      ser = serial.Serial(serPort, baudRate)
 
 
-except SerialException:
-    print "Could not connect to device"
-    serPort = altSerPort
-    ser = serial.Serial(serPort, baudRate)
+  except SerialException:
+      print "Could not connect to device"
+      serPort = altSerPort
 
+      try:
+          ser = serial.Serial(serPort, baudRate)
+          print "Serial port " + serPort + " opened  Baudrate " + str(baudRate)
+      except SerialException:
+          return 0
 
-
-print "Serial port " + serPort + " opened  Baudrate " + str(baudRate)
+serialconnect()
 
 ##VARIABLES
 
@@ -234,24 +251,37 @@ print "\nStarting OSCServer. Use ctrl-C to quit."
 st = threading.Thread( target = s.serve_forever )
 st.start()
 
-
+activeTeensy = 0
 
 time.sleep(.1)
 
-waitForArduino()
 
-while True:
-  testData = []
-  testData.append("<drive,127," + str(drive) + ">")
-  testData.append("<strafe,127," + str(strafe) + ">")
-  testData.append("<turn,127," + str(turn) + ">")
-
-
-  runTest(testData)
 
 try :
     while 1 :
-        time.sleep(5)
+
+      if activeTeensy == 0:
+        while(serialconnect() == 0):
+          pass
+
+        waitForArduino()
+        print "teensy inactive"
+
+      testData = []
+      testData.append("<drive,127," + str(drive) + ">")
+      testData.append("<strafe,127," + str(strafe) + ">")
+      testData.append("<turn,127," + str(turn) + ">")
+
+      while True:
+        try:
+            driver = runTest(testData)
+            break
+        except SerialException:
+            activeTeensy = 0
+            print "serial exception"
+            time.sleep(1)
+            break
+
 
 except KeyboardInterrupt :
     print "\nClosing OSCServer."
