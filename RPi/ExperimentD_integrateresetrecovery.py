@@ -253,7 +253,7 @@ st.start()
 
 activeTeensy = 0
 
-time.sleep(.1)
+time.sleep(1)
 
 
 
