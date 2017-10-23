@@ -162,15 +162,15 @@ print
 
 # NOTE the user must ensure that the serial port and baudrate are correct
 #serPort = "/dev/serial0" #plugged into UART on pi
-serPort = "/dev/ttyACM0" #controller plugged directly into USB port on Pi
-altSerPort = "/dev/ttyACM1" #sensor plugged directly into USB port on Pi
+serPort = "/dev/sensor" #controller plugged directly into USB port on Pi
+altSerPort = "/dev/controller" #sensor plugged directly into USB port on Pi
 baudRate = 115200
 ser = None
 ser_sensor = None
 
 def serialconnect():
   global baudrate, ser
-  serPort = "/dev/ttyACM0" #try this first for the controller
+  serPort = "/dev/controller" #try this first for the controller
   altSerPort = "/dev/ttyACM1" #plug in the controller first
   
   try :
@@ -189,11 +189,11 @@ def serialconnect():
 
 def serialconnect_sensor():
   global baudrate, ser_sensor
-  serPort = "/dev/ttyACM0" #plug in the controller first
+  serPort = "/dev/sensor" #plug in the controller first
   altSerPort = "/dev/ttyACM1" #try this first for sensor
   
   try :
-      ser_sensor = serial.Serial(altserPort, baudRate)
+      ser_sensor = serial.Serial(altSerPort, baudRate)
 
 
   except SerialException:
@@ -282,7 +282,7 @@ time.sleep(1)
 
 try :
     while 1 :
-
+      print activeController
       ######SERIAL RECEIVE SENSOR -> JSON
       data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
       j_sensor = json.loads(data)
@@ -318,6 +318,7 @@ except KeyboardInterrupt :
     s.close()
     print "\nClosing SerialPort."
     ser.close
+    ser_sensor.close
 
     print "Waiting for Server-thread to finish"
     st.join() ##!!!
