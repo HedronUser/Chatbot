@@ -7,6 +7,9 @@
 
 #include <VL53L0X.h>
 
+#include <ArduinoJson.h>
+
+
 VL53L0X sensor;
 
 
@@ -66,21 +69,21 @@ void setup(){
   pinMode(mux2en, OUTPUT);
   
   
-  digitalWrite(s0, LOW);
-  digitalWrite(s1, LOW);
-  digitalWrite(s2, LOW);
-  digitalWrite(s3, LOW);
-  digitalWrite(mux1en, LOW); //initialize the mux 1 ON
+  digitalWriteFast(s0, LOW);
+  digitalWriteFast(s1, LOW);
+  digitalWriteFast(s2, LOW);
+  digitalWriteFast(s3, LOW);
+  digitalWriteFast(mux1en, LOW); //initialize the mux 1 ON
   
   
-  digitalWrite(d0, LOW);
-  digitalWrite(d1, LOW);
-  digitalWrite(d2, LOW);
-  digitalWrite(d3, LOW);
-  digitalWrite(mux2en, HIGH); //initialize the mux 2 OFF
+  digitalWriteFast(d0, LOW);
+  digitalWriteFast(d1, LOW);
+  digitalWriteFast(d2, LOW);
+  digitalWriteFast(d3, LOW);
+  digitalWriteFast(mux2en, HIGH); //initialize the mux 2 OFF
   
   
-  Serial.begin(9600);
+  Serial.begin(115200);
   
   
     
@@ -98,27 +101,27 @@ void setup(){
       initializeMux1(i); //assign the returned value to a number
       delay(1); 
       }
-  delay(100);   
+  delay(1000);   
   
-  digitalWrite(mux1en, HIGH); //turn mux 1 OFF
+  digitalWriteFast(mux1en, HIGH); //turn mux 1 OFF
   
-  digitalWrite(mux2en, LOW); //turn mux 2 ON
+  digitalWriteFast(mux2en, LOW); //turn mux 2 ON
 
   delay(100);
   //initialize sensor 16 and 24
   initializeMux2(0); //sensor 16 set at channel 0 
   delay(100);
   initializeMux2(1); //sensor 24 set at channel 1
-  
+  delay(100);
   //initialize MUX 2 - sensors 17-23
   for(int j = 8; j < 15; j ++){ 
       initializeMux2(j); //assign the returned value to a number
     } 
 
   delay(500);
-  digitalWrite(mux2en, HIGH); //turn mux 2 OFF
+  digitalWriteFast(mux2en, HIGH); //turn mux 2 OFF
   
-  digitalWrite(mux1en, LOW); //turn mux 1 ON
+  digitalWriteFast(mux1en, LOW); //turn mux 1 ON
   //delay(100);
 }
 
@@ -129,12 +132,13 @@ int obstacledetection[] = {0, 0, 0, 0}; //initialize obstacle detection array to
 
 
 void loop(){
-    potval = analogRead(0); //read the value of trimpot
-    Serial.print("analog 0 is: ");
-    Serial.println(potval);
-    //delay(10);
     readmuxes();
     parsearray(); //processes sensor data and writes to the obstacle detection array
+    potval = analogRead(0); //read the value of trimpot
+//    Serial.print("analog 0 is: ");
+//    Serial.println(potval);
+    //delay(10);
+
     publishvalues();
       
 } 
@@ -154,8 +158,8 @@ void readmuxes(void){
   
   //Serial.print(sensorArray);
   //delay(10);
-  digitalWrite(mux1en, HIGH); //turn mux 1 OFF
-  digitalWrite(mux2en, LOW); //turn mux 2 ON
+  digitalWriteFast(mux1en, HIGH); //turn mux 1 OFF
+  digitalWriteFast(mux2en, LOW); //turn mux 2 ON
   //delay(10);
   //read sensor 15
   readMux2(0);
@@ -179,8 +183,8 @@ void readmuxes(void){
    
   //Serial.print(sensorArray);
   //delay(10);
-  digitalWrite(mux2en, HIGH); //turn mux 2 OFF
-  digitalWrite(mux1en, LOW); //turn mux 1 ON
+  digitalWriteFast(mux2en, HIGH); //turn mux 2 OFF
+  digitalWriteFast(mux1en, LOW); //turn mux 1 ON
   //delay(10);
 
 }
@@ -191,28 +195,42 @@ void publishvalues(void){
 //is present that is below threshold value
  
  // Serial.print("Incoming Obstacle Data");
-  for (int i = 0; i < 4; i++){
-    if (i == 0){
-      Serial.println();
-      Serial.print("front");
-      Serial.println();
-      }
-    if (i == 1){
-      Serial.print("left");
-      Serial.println();
-      }
-    if (i == 2){
-      Serial.print("rear");
-      Serial.println();
-      }
-    if (i == 3){
-      Serial.print("right");
-      Serial.println();
-      }
-    Serial.print(obstacledetection[i]);
-    Serial.println();
-    //delay(100);
-  }
+    
+    StaticJsonBuffer<200> jsonBuffer;
+    JsonObject& root = jsonBuffer.createObject();
+    JsonArray& channel_data = root.createNestedArray("channel_data");
+    for( int i = 0; i < 15; i++){   //for 16 channels
+     //channel_data.add(readMux(i));   //REAL DATA <-- Jesse!
+       channel_data.add(1);            //FAKE DATA
+    }
+    root.printTo(Serial);
+    Serial.println();           //ln return is required for successful parsing
+
+    //delay(1000); //Why a delay of 1 second?
+
+ 
+//  for (int i = 0; i < 4; i++){
+//    if (i == 0){
+//      Serial.println();
+//      Serial.print("front");
+//      Serial.println();
+//      }
+//    if (i == 1){
+//      Serial.print("left");
+//      Serial.println();
+//      }
+//    if (i == 2){
+//      Serial.print("rear");
+//      Serial.println();
+//      }
+//    if (i == 3){
+//      Serial.print("right");
+//      Serial.println();
+//      }
+//    Serial.print(obstacledetection[i]);
+//    Serial.println();
+//    //delay(100);
+//  }
 }
 
 void parsearray(void){
@@ -283,7 +301,7 @@ void readMux1(int chan){ //points to global sensorarray
     {1,1,1,1} //channel 15
     }; //loop through the 4 sig 
     for(int i = 0; i < 4; i ++){
-      digitalWrite(controlPin[i], muxChannel[chan][i]);
+      digitalWriteFast(controlPin[i], muxChannel[chan][i]);
       } 
 
     
@@ -294,7 +312,11 @@ void readMux1(int chan){ //points to global sensorarray
     sensorArray[chan] = range; //write into 1st part of array
     
    //Serial.print(sensor.readRangeSingleMillimeters());
-   if (sensor.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
+   if (sensor.timeoutOccurred()) { 
+    //Serial.print(" TIMEOUT"); 
+      //try to reinitialize sensor
+    initializeMux1(chan);
+   }
    Serial.println();
 
 
@@ -327,12 +349,15 @@ void readMux2(int chan){
     {1,1,1,1} //channel 15
     }; //loop through the 4 sig 
     for(int i = 0; i < 4; i ++){
-      digitalWrite(controlPin[i], muxChannel[chan][i]);
+      digitalWriteFast(controlPin[i], muxChannel[chan][i]);
       } 
     
    //Serial.print(sensor.readRangeSingleMillimeters());
-   if (sensor.timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-   
+   if (sensor.timeoutOccurred()) { 
+//    Serial.print(" TIMEOUT"); 
+    //try to reinitialize sensor
+      initializeMux2(chan);
+    }
    Serial.println();
 
     
@@ -383,11 +408,11 @@ void initializeMux1(int chan){
     }; 
     //loop through the 4 sig to set the pins for mux channel
     for(int i = 0; i < 4; i ++){
-      digitalWrite(controlPin[i], muxChannel[chan][i]);
+      digitalWriteFast(controlPin[i], muxChannel[chan][i]);
       }; 
     
     sensor.init();
-    sensor.setTimeout(500); //STOCK IS 500
+    sensor.setTimeout(50); //STOCK IS 500
 
     
 #if defined LONG_RANGE
@@ -437,12 +462,12 @@ void initializeMux2(int chan){
     }; 
     //loop through the 4 sig to set the pins for mux channel
     for(int i = 0; i < 4; i ++){
-      digitalWrite(controlPin[i], muxChannel[chan][i]);
+      digitalWriteFast(controlPin[i], muxChannel[chan][i]);
       } 
     
 
     sensor.init();
-    sensor.setTimeout(500); //50 initial
+    sensor.setTimeout(50); //50 initial
     
 #if defined LONG_RANGE
   // lower the return signal rate limit (default is 0.25 MCPS)
