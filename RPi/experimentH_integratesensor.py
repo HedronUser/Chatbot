@@ -40,13 +40,13 @@ connect_controller = 0
 
 def sendToArduino(sendStr):
   global ser
-  ser.write(sendStr)
+  ser_controller.write(sendStr)
 
 
 #======================================
 
 def recvFromArduino():
-  global startMarker, endMarker, ser
+  global startMarker, endMarker, ser_controller
   
   ck = ""
   x = "z" # any value that is not an end- or startMarker
@@ -54,14 +54,14 @@ def recvFromArduino():
   
   # wait for the start character
   while  ord(x) != startMarker: 
-    x = ser.read()
+    x = ser_controller.read()
   
   # save data until the end marker is found
   while ord(x) != endMarker:
     if ord(x) != startMarker:
       ck = ck + x 
       byteCount += 1
-    x = ser.read()
+    x = ser_controller.read()
   
   return(ck)
 
@@ -79,19 +79,19 @@ def waitForArduino():
     while msg.find("Arduino is ready") == -1:
       try:
 
-          while ser.inWaiting() == 0:
-            print "ser.inwaiting passed"
+          while ser_controller.inWaiting() == 0:
+            print "ser_controller.inwaiting passed"
           
   
           msg = recvFromArduino()
 
           print msg
           print
-          activeController = 1
+          connect_controller = 1
           
       except IOError:
           msg = ""
-          activeController = 0 
+          connect_controller = 0 
           print "ioerror"
           return
         
@@ -179,13 +179,6 @@ def turn_handler(addr, tags, stuff, source):
 def sample_handler(addr, tag, stuff, source):
     h = 1
 
-##s.addMsgHandler("/print", printing_handler) # adding our function
-s.addMsgHandler("/drive", drive_handler)
-s.addMsgHandler("/strafe", strafe_handler)
-s.addMsgHandler("/turn", turn_handler)
-s.addMsgHandler("/_samplerate", sample_handler)
-
-
 
 #======================================
 
@@ -198,6 +191,12 @@ s.addMsgHandler("/_samplerate", sample_handler)
 s = OSC.OSCServer(receive_address) # basic
 
 s.addDefaultHandlers()
+
+##s.addMsgHandler("/print", printing_handler) # adding our function
+s.addMsgHandler("/drive", drive_handler)
+s.addMsgHandler("/strafe", strafe_handler)
+s.addMsgHandler("/turn", turn_handler)
+s.addMsgHandler("/_samplerate", sample_handler)
 
 # just checking which handlers we have added
 print "Registered Callback-functions are :"
@@ -241,13 +240,15 @@ while 1 :
         print "Done"
     except SerialException:
         connect_sensor = 0
-        time.sleep(5)
+        print "serial exception teensy Controller"
+        time.sleep(1)
 
 
     try:
         ######SERIAL WRITE CONTROLLER
       if connect_controller == 0:
         while(serialconnect_controller() == 0):
+          print "teensy Controller connecting"   
           pass
 
         waitForArduino()
@@ -258,13 +259,21 @@ while 1 :
       testData.append("<strafe,127," + str(strafe) + ">")
       testData.append("<turn,127," + str(turn) + ">")
 
-      while True:
-        try:
-            driver = runTest(testData)
-            break
-        except SerialException:
-            activeController = 0
-            print "serial exception teensy Controller"
-            time.sleep(1)
-            break
+    
+      driver = runTest(testData)
+        
+    except SerialException:
+        connect_controller = 0
+        print "serial exception teensy Controller"
+        time.sleep(1)
+    
+    except KeyboardInterrupt:
+        print "\nClosing OSCServer."
+        s.close()
+        print "\nClosing SerialPort."
+        ser_controller.close
+        ser_sensor.close
+        print "Waiting for Server-thread to finish"
+        st.join() ##!!!
+        print "Done"
 
