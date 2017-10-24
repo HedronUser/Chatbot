@@ -7,6 +7,7 @@ import datetime
 import decision_engine
 import OSC
 import os
+import sys
 
 
 
@@ -235,6 +236,8 @@ while 1 :
           #make dictionary with current osc values
           j_osc = {"drive":drive, "strafe": strafe, "turn": turn}
 
+          print j_osc
+          
           #filter
           filteredmovement = decision_engine.sensor_filter(j_sensor, j_osc)
 
@@ -280,7 +283,7 @@ while 1 :
       testData.append("<strafe,127," + str(filteredStrafe) + ">")
       testData.append("<turn,127," + str(filteredTurn) + ">")
 
-    
+      print testData
       driver = runTest(testData)
         
     except SerialException:

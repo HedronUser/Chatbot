@@ -28,7 +28,27 @@ def sensor_filter(j_sensor, j_osc):
     ##TODO: incorportate "potval" and "toe" timeouterror in channel_data
     #potval = j_sensor["potval"]
 
+    threshold = 200
+    
+    #filter small distance values( which are glitches at large distance)
+    for i in range(24):
+        if j_sensor["channel_data"][i] < 10:
+            j_sensor["channel_data"][i] = 8190
 
+
+    for j in range(24):
+
+        #map values between 8190 mm and the threshold to 0
+        if j_sensor["channel_data"][j] > threshold:
+            j_sensor["channel_data"][j] = 0
+
+        #map values between threshold and small valid values to 1  
+        elif j_sensor["channel_data"][j] <= threshold:
+            j_sensor["channel_data"][j] = 1
+
+    
+
+    print j_sensor 
     #for i in range(25):
     #    if j_sesnor["channel"] == "toe":
     #        pass #figure out what to do with data
@@ -43,16 +63,16 @@ def sensor_filter(j_sensor, j_osc):
     any_obs = top_obs + right_obs + bottom_obs + left_obs
 
     drive = j_osc["drive"] # 127 -> drive forward, -127 -> drive reverse
-    if top_obs > 0 & drive > 0:
+    if top_obs > 0 and drive > 0:
         drive = 0
-    if bottom_obs > 0 & drive < 0:
+    if bottom_obs > 0 and drive < 0:
         drive = 0
     j_osc["drive"] = drive
 
     strafe = j_osc["strafe"] # 127 -> stafe right, -127 -> strafe left
-    if right_obs > 0 & strafe > 0:
+    if right_obs > 0 and strafe > 0:
         strafe = 0
-    if left_obs > 0 & strafe < 0:
+    if left_obs > 0 and strafe < 0:
         strafe = 0
     j_osc["strafe"] = strafe
 
