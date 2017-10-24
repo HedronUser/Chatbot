@@ -16,6 +16,10 @@ drive = 0
 strafe = 0
 turn = 0
 
+filteredDrive = 0
+filteredStrafe = 0
+filteredTurn = 0
+
 startMarker = 60
 endMarker = 62
 
@@ -224,8 +228,24 @@ while 1 :
           data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
           j_sensor = json.loads(data)
           print j_sensor
-          print datetime.datetime.now()
-          
+          #print datetime.datetime.now()
+
+          #filter thru decision engine
+
+          #make dictionary with current osc values
+          j_osc = {"drive":drive, "strafe": strafe, "turn": turn}
+
+          #filter
+          filteredmovement = decision_engine.sensor_filter(j_sensor, j_osc)
+
+          #bind to new variables, this could be skipped
+          filteredDrive = filteredmovement["drive"] 
+
+          filteredStrafe = filteredmovement["strafe"] 
+
+          filteredTurn = filteredmovement["turn"] 
+
+
         else:
             serialconnect_sensor()
 
@@ -238,6 +258,7 @@ while 1 :
         print "Waiting for Server-thread to finish"
         st.join() ##!!!
         print "Done"
+        sys.exit
     except SerialException:
         connect_sensor = 0
         print "serial exception teensy Controller"
@@ -252,12 +273,12 @@ while 1 :
           pass
 
         waitForArduino()
-        print "teensy Controller inactive"
+        #print "teensy Controller active"
 
       testData = []
-      testData.append("<drive,127," + str(drive) + ">")
-      testData.append("<strafe,127," + str(strafe) + ">")
-      testData.append("<turn,127," + str(turn) + ">")
+      testData.append("<drive,127," + str(filteredDrive) + ">")
+      testData.append("<strafe,127," + str(filteredStrafe) + ">")
+      testData.append("<turn,127," + str(filteredTurn) + ">")
 
     
       driver = runTest(testData)
@@ -276,4 +297,5 @@ while 1 :
         print "Waiting for Server-thread to finish"
         st.join() ##!!!
         print "Done"
+        sys.exit
 
