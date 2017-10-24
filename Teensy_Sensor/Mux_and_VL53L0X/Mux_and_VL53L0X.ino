@@ -101,31 +101,29 @@ void setup(){
       initializeMux1(i); //assign the returned value to a number
       delay(1); 
       }
-  delay(1000);   
   
   digitalWriteFast(mux1en, HIGH); //turn mux 1 OFF
-  
   digitalWriteFast(mux2en, LOW); //turn mux 2 ON
 
-  delay(100);
   //initialize sensor 16 and 24
   initializeMux2(0); //sensor 16 set at channel 0 
-  delay(100);
+  delay(1);
   initializeMux2(1); //sensor 24 set at channel 1
-  delay(100);
+  delay(1);
   //initialize MUX 2 - sensors 17-23
   for(int j = 8; j < 15; j ++){ 
       initializeMux2(j); //assign the returned value to a number
+      delay(1);
     } 
 
-  delay(500);
+  delay(1);
   digitalWriteFast(mux2en, HIGH); //turn mux 2 OFF
-  
   digitalWriteFast(mux1en, LOW); //turn mux 1 ON
   //delay(100);
+//  Serial.print("changeD");
 }
 
-int sensorArray[] = {1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000}; //fake test array
+int sensorArray[] = {1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 1000,1000,600,1000,1000,1000, 0}; //fake test array
 //int sensorArray[] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}; //holds 24 sensor values
 
 int obstacledetection[] = {0, 0, 0, 0}; //initialize obstacle detection array to hold obstacle direction values (Front, Right, Rear, Left)  
@@ -166,7 +164,7 @@ void loop(){
     curMillis = millis();
     readmuxes();
     //parsearray(); //processes sensor data and writes to the obstacle detection array
-    //potval = analogRead(0); //read the value of trimpot
+    potval = analogRead(0); //read the value of trimpot
 //    Serial.print("analog 0 is: ");
 //    Serial.println(potval);
     //delay(10);
@@ -175,9 +173,9 @@ void loop(){
     newMillis = millis();
     deltaMillis = newMillis - curMillis;
     
-    Serial.println(deltaMillis);
-    Serial.print("ElapsedTime : ");
-    Serial.println(millis());
+//    Serial.println(deltaMillis);
+//    Serial.print("ElapsedTime : ");
+//    Serial.println(millis());
       
 } 
 
@@ -197,13 +195,18 @@ void readmuxes(void){
   //delay(10);
   digitalWriteFast(mux1en, HIGH); //turn mux 1 OFF
   digitalWriteFast(mux2en, LOW); //turn mux 2 ON
-  //delay(10);
-  //read sensor 15
+  delay(1);
+  //read sensor 15 twice
+  readMux2(0);
   readMux2(0);
 //  Serial.print("Value at channel 15is : ");
 //  Serial.print(sensorArray[15]);
   // Read MUX 2
   delay(1);
+    //read sensor 23 twice
+  readMux2(1);
+  readMux2(1);
+  
   for(int l = 8; l < 15; l ++){ 
     //reads into 16-23
     readMux2(l);
@@ -213,8 +216,7 @@ void readmuxes(void){
 //    Serial.print("is : "); 
 //    Serial.print(sensorArray[l+8]); 
    }
-  //read sensor 23
-  readMux2(1);
+
 //  Serial.print("Value at channel 23is : ");
 //  Serial.print(sensorArray[23]);
   //delay(10);
@@ -323,12 +325,22 @@ void readMux1(int chan){ //points to global sensorarray
 
     
     range = sensor.readRangeContinuousMillimeters(); //bind distance of sensor to range variable
+    
+    //check to see if value is > 8190 and reinitialize
+    if (range > 8200){
+      initializeMux1(chan);  
+    }
+
+    if (range == 0){
+      range = 8190;
+    }
+      
       //write into array
     sensorArray[chan] = range;
 
    //Serial.print(sensor.readRangeSingleMillimeters());
    if (sensor.timeoutOccurred()) { 
-    Serial.print(" TIMEOUT"); 
+//    Serial.print(" TIMEOUT"); 
 
     initializeMux1(chan);
    }
@@ -352,18 +364,21 @@ void readMux2(int chan){
     
    //Serial.print(sensor.readRangeSingleMillimeters());
    if (sensor.timeoutOccurred()) { 
-    Serial.print(" TIMEOUT");
+//    Serial.print(" TIMEOUT");
       initializeMux2(chan); 
     }
    //Serial.println();
 
    //broke here
    range = sensor.readRangeContinuousMillimeters(); //bind distance of sensor to range variable
-  
+      //check to see if value is > 8190 and reinitialize
+    if (range > 8200){
+      initializeMux2(chan);  
+    }
   
   //bind channel 15 to right place in array
   if (chan == 0){
-    sensorArray[14] = range;
+    sensorArray[15] = range;
     
   }
   else if (chan == 1){
