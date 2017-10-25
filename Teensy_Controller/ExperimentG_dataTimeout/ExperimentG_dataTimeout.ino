@@ -448,6 +448,7 @@ void replyToPC() {
 
 // Sensds msg to pc with start and end characters
 void sendMsgToPC(String msg) {
+    Serial.println("<" + msg + ">");
 }
 
 //============
