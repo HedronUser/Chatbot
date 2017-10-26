@@ -213,7 +213,6 @@ void loop() {
 }
 
 void handleKangarooSetup(void){
-  
   KR1.start();
   KR1.home();//.wait();
 
@@ -224,7 +223,7 @@ void handleKangarooSetup(void){
   KF1.home();//.wait();
 
   KF2.start();
-  KF2.home();//.wait(); 
+  KF2.home();//.wait();
 }
 
 //============
@@ -233,10 +232,15 @@ void updateEstop(void){
   bool wasEstop = isEstop;
   isEstop = digitalReadFast(eStopPin);
 
-  if (wasEstop && !isEstop && hasDataConnection) {
-    // estop just ended AND there's a data connection - so power up the kangaroos
-    handleKangarooSetup();
-    sendMsgToPC("Estop ended - powering up kangaroos");
+  if (wasEstop && !isEstop) {
+    sendMsgToPC("Estop ended");
+    if (hasDataConnection) {
+       // there's a data connection - so power up the kangaroos 
+       handleKangarooSetup();
+       sendMsgToPC("has data connection - powering up kangaroos");
+    } else {
+        sendMsgToPC("no data connection - not powering up kangaroos");
+    }
   } else if (isEstop && !wasEstop) {
     // estop just started - send a powerOff()
     powerOff();
