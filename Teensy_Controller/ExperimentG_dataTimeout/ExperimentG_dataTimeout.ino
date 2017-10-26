@@ -239,6 +239,7 @@ void updateEstop(void){
        handleKangarooSetup();
        sendMsgToPC("has data connection - powering up kangaroos");
     } else {
+        handleKangarooSetup(); //setup kangaroos anyway because maybe we want to drive around with RC or reinitialize after a boot and internet wont be there right away/
         sendMsgToPC("no data connection - not powering up kangaroos");
     }
   } else if (isEstop && !wasEstop) {
