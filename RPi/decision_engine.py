@@ -26,9 +26,29 @@ def sensor_filter(j_sensor, j_osc):
     """
 
     ##TODO: incorportate "potval" and "toe" timeouterror in channel_data
-    potval = j_sensor["potval"]
+    #potval = j_sensor["potval"]
+
+    threshold = 200
+    
+    #filter small distance values( which are glitches at large distance)
+    for i in range(24):
+        if j_sensor["channel_data"][i] < 10:
+            j_sensor["channel_data"][i] = 8190
 
 
+    for j in range(24):
+
+        #map values between 8190 mm and the threshold to 0
+        if j_sensor["channel_data"][j] > threshold:
+            j_sensor["channel_data"][j] = 0
+
+        #map values between threshold and small valid values to 1  
+        elif j_sensor["channel_data"][j] <= threshold:
+            j_sensor["channel_data"][j] = 1
+
+    
+
+    print j_sensor 
     #for i in range(25):
     #    if j_sesnor["channel"] == "toe":
     #        pass #figure out what to do with data
@@ -36,28 +56,28 @@ def sensor_filter(j_sensor, j_osc):
 
     ##We sum over the sensor values to find if any sensor has
     ##been tripped. Positive non-zero number means obstacle.
-    top_obs = sum(j_sensor["channel"][0:5])
-    right_obs = sum(j_sensor["channel"][6:11])
-    bottom_obs = sum(j_sensor["channel"][12:17])
-    left_obs = sum(j_sensor["channel"][18:23])
+    top_obs = sum(j_sensor["channel_data"][0:5])
+    right_obs = sum(j_sensor["channel_data"][6:11])
+    bottom_obs = sum(j_sensor["channel_data"][12:17])
+    left_obs = sum(j_sensor["channel_data"][18:23])
     any_obs = top_obs + right_obs + bottom_obs + left_obs
 
     drive = j_osc["drive"] # 127 -> drive forward, -127 -> drive reverse
-    if top_obs > 0 & drive > 0:
+    if top_obs > 0 and drive > 0:
         drive = 0
-    if bottom_obs > 0 & drive < 0:
+    if bottom_obs > 0 and drive < 0:
         drive = 0
     j_osc["drive"] = drive
 
     strafe = j_osc["strafe"] # 127 -> stafe right, -127 -> strafe left
-    if right_obs > 0 & strafe > 0:
+    if right_obs > 0 and strafe > 0:
         strafe = 0
-    if left_obs > 0 & strafe < 0:
+    if left_obs > 0 and strafe < 0:
         strafe = 0
     j_osc["strafe"] = strafe
 
-    turn = j_osc["turn"] # 127 -> rotate clock-wise, -127 rotate counter-clock-wise
     if any_obs > 0:
         turn = 0
+    turn = j_osc["turn"] # 127 -> rotate clock-wise, -127 rotate counter-clock-wise
 
     return j_osc
