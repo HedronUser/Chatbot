@@ -8,7 +8,7 @@ import decision_engine
 import OSC
 import os
 import sys
-
+import socket, errno
 
 
 ##VARIABLES
@@ -24,7 +24,7 @@ filteredTurn = 0
 startMarker = 60
 endMarker = 62
 
-receive_address = '192.168.1.86', 9000
+receive_address = '192.168.1.87', 9000
 
 sensorPort = "/dev/sensor" #plugged directly into USB port on Pi
 controllerPort = "/dev/controller" #plugged directly into USB port on Pi
@@ -36,7 +36,7 @@ ser_sensor = None
 connect_sensor = 0
 connect_controller = 0
 
-
+ip_not_assigned = True
 #=====================================
 
 #  Function Definitions
@@ -191,29 +191,38 @@ def sample_handler(addr, tag, stuff, source):
 
 #======================================
 
-# OSC Server. there are three different types of server.
+# OSC Server.
 
-s = OSC.OSCServer(receive_address) # basic
+while ip_not_assigned:
+  
+    try:
+        s = OSC.OSCServer(receive_address) # basic
 
-s.addDefaultHandlers()
+        s.addDefaultHandlers()
 
-##s.addMsgHandler("/print", printing_handler) # adding our function
-s.addMsgHandler("/drive", drive_handler)
-s.addMsgHandler("/strafe", strafe_handler)
-s.addMsgHandler("/turn", turn_handler)
-s.addMsgHandler("/_samplerate", sample_handler)
+        ##s.addMsgHandler("/print", printing_handler) # adding our function
+        s.addMsgHandler("/drive", drive_handler)
+        s.addMsgHandler("/strafe", strafe_handler)
+        s.addMsgHandler("/turn", turn_handler)
+        s.addMsgHandler("/_samplerate", sample_handler)
 
-# just checking which handlers we have added
-print "Registered Callback-functions are :"
-for addr in s.getOSCAddressSpace():
-    print addr
-    
-# Start OSCServer
-print "\nStarting OSCServer. Use ctrl-C to quit."
-st = threading.Thread( target = s.serve_forever )
-st.start()
+        # just checking which handlers we have added
+        print "Registered Callback-functions are :"
+        for addr in s.getOSCAddressSpace():
+            print addr
+            
+        # Start OSCServer
+        print "\nStarting OSCServer. Use ctrl-C to quit."
+        st = threading.Thread( target = s.serve_forever )
+        st.start()
 
-time.sleep(1)
+        time.sleep(1)
+        
+        ip_not_assigned = False
+        
+    except socket.error, NameError:
+        print "Socket error - cannot assign server programmed ip address"
+        
 
 
 
@@ -275,7 +284,7 @@ while 1 :
         #print "teensy Controller active"
 
       #if sensor connected we want to use filtered data  
-      if connect_sensor == 1:
+      if connect_sensor == 1 and connect_controller == 1:
         testData = []
         testData.append("<drive,127," + str(filteredDrive) + ">")
         testData.append("<strafe,127," + str(filteredStrafe) + ">")
@@ -285,7 +294,7 @@ while 1 :
         driver = runTest(testData)
 
       #if sensors not connected we want to use unfiltered data
-      elif connect_sensor == 0:
+      elif connect_sensor == 0 and connect_controller == 1:
         testData = []
         testData.append("<drive,127," + str(drive) + ">")
         testData.append("<strafe,127," + str(strafe) + ">")
