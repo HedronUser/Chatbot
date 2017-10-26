@@ -76,8 +76,8 @@ def sensor_filter(j_sensor, j_osc):
         strafe = 0
     j_osc["strafe"] = strafe
 
-    turn = j_osc["turn"] # 127 -> rotate clock-wise, -127 rotate counter-clock-wise
     if any_obs > 0:
         turn = 0
+    turn = j_osc["turn"] # 127 -> rotate clock-wise, -127 rotate counter-clock-wise
 
     return j_osc
