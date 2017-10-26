@@ -24,7 +24,7 @@ filteredTurn = 0
 startMarker = 60
 endMarker = 62
 
-receive_address = '192.168.1.52', 9000
+receive_address = '192.168.1.87', 9000
 
 sensorPort = "/dev/sensor" #plugged directly into USB port on Pi
 controllerPort = "/dev/controller" #plugged directly into USB port on Pi
@@ -159,7 +159,7 @@ def serialconnect_controller():
 
 
 def drive_handler(addr, tags, stuff, source):
-    global drive
+    global drive, newData
     drive = stuff[0]
     newData = True
     
@@ -169,7 +169,7 @@ def drive_handler(addr, tags, stuff, source):
 
 ##
 def strafe_handler(addr, tags, stuff, source):
-    global strafe
+    global strafe, newData
     strafe = stuff[0]
     newData = True
 
@@ -179,7 +179,7 @@ def strafe_handler(addr, tags, stuff, source):
 ##    print "stuff: %s" % stuff
     
 def turn_handler(addr, tags, stuff, source):
-    global turn
+    global turn, newData
     turn = stuff[0]
     newData = True
     
@@ -220,8 +220,6 @@ print "\nStarting OSCServer. Use ctrl-C to quit."
 st = threading.Thread( target = s.serve_forever )
 st.start()
 
-activeController = 0
-
 time.sleep(1)
 
 
@@ -229,53 +227,49 @@ time.sleep(1)
 
 while 1 :
 
-    try:
-        if connect_sensor == 1:
-        	if (not ONLY_SEND_ON_RECEIVE or newData):
-
-			  ######SERIAL RECEIVE SENSOR -> JSON
-			  data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
-			  j_sensor = json.loads(data)
-			  print j_sensor
-			  #print datetime.datetime.now()
-
-			  #filter thru decision engine
-
-			  #make dictionary with current osc values
-			  j_osc = {"drive":drive, "strafe": strafe, "turn": turn}
-
-			  print j_osc
-		  
-			  #filter
-			  filteredmovement = decision_engine.sensor_filter(j_sensor, j_osc)
-
-			  #bind to new variables, this could be skipped
-			  filteredDrive = filteredmovement["drive"] 
-
-			  filteredStrafe = filteredmovement["strafe"] 
-
-			  filteredTurn = filteredmovement["turn"] 
-			  
-			  newData = False
-
-
-        else:
-            serialconnect_sensor()
-
-    except KeyboardInterrupt:
-        print "\nClosing OSCServer."
-        s.close()
-        print "\nClosing SerialPort."
-        ser_controller.close
-        ser_sensor.close
-        print "Waiting for Server-thread to finish"
-        st.join() ##!!!
-        print "Done"
-        sys.exit
-    except SerialException:
-        connect_sensor = 0
-        print "serial exception teensy Controller"
-        time.sleep(1)
+##    try:
+##        if connect_sensor == 1:
+##
+##			  ######SERIAL RECEIVE SENSOR -> JSON
+##			  data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
+##			  j_sensor = json.loads(data)
+##			  print j_sensor
+##			  #print datetime.datetime.now()
+##
+##			  #filter thru decision engine
+##
+##			  #make dictionary with current osc values
+##			  j_osc = {"drive":drive, "strafe": strafe, "turn": turn}
+##
+##			  print j_osc
+##		  
+##			  #filter
+##			  filteredmovement = decision_engine.sensor_filter(j_sensor, j_osc)
+##
+##			  #bind to new variables, this could be skipped
+##			  filteredDrive = filteredmovement["drive"] 
+##
+##			  filteredStrafe = filteredmovement["strafe"] 
+##
+##			  filteredTurn = filteredmovement["turn"]
+##
+##        else:
+##            serialconnect_sensor()
+##
+##    except KeyboardInterrupt:
+##        print "\nClosing OSCServer."
+##        s.close()
+##        print "\nClosing SerialPort."
+##        ser_controller.close
+##        ser_sensor.close
+##        print "Waiting for Server-thread to finish"
+##        st.join() ##!!!
+##        print "Done"
+##        sys.exit
+##    except SerialException:
+##        connect_sensor = 0
+##        print "serial exception teensy Controller"
+##        time.sleep(1)
 
 
     try:
@@ -289,9 +283,9 @@ while 1 :
         #print "teensy Controller active"
 
       testData = []
-      testData.append("<drive,127," + str(filteredDrive) + ">")
-      testData.append("<strafe,127," + str(filteredStrafe) + ">")
-      testData.append("<turn,127," + str(filteredTurn) + ">")
+      testData.append("<drive,127," + str(drive) + ">")
+      testData.append("<strafe,127," + str(turn) + ">")
+      testData.append("<turn,127," + str(strafe) + ">")
 
       print testData
       driver = runTest(testData)
@@ -311,4 +305,10 @@ while 1 :
         st.join() ##!!!
         print "Done"
         sys.exit
+
+    drive = 0
+    turn = 0
+    strafe = 0
+    
+
 

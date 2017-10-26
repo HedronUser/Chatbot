@@ -24,7 +24,7 @@ filteredTurn = 0
 startMarker = 60
 endMarker = 62
 
-receive_address = '192.168.1.52', 9000
+receive_address = '192.168.1.87', 9000
 
 sensorPort = "/dev/sensor" #plugged directly into USB port on Pi
 controllerPort = "/dev/controller" #plugged directly into USB port on Pi
@@ -78,7 +78,7 @@ def waitForArduino():
    # wait until the Arduino sends 'Arduino Ready' - allows time for Arduino reset
    # it also ensures that any bytes left over from a previous message are discarded
    
-    global startMarker, endMarker, activeController, ser
+    global startMarker, endMarker, connect_controller, ser
     
     msg = ""
     while msg.find("Arduino is ready") == -1:
@@ -213,8 +213,6 @@ print "\nStarting OSCServer. Use ctrl-C to quit."
 st = threading.Thread( target = s.serve_forever )
 st.start()
 
-activeController = 0
-
 time.sleep(1)
 
 
@@ -227,7 +225,11 @@ while 1 :
 
           ######SERIAL RECEIVE SENSOR -> JSON
           data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
+
+
           j_sensor = json.loads(data)
+  
+
           print j_sensor
           #print datetime.datetime.now()
 
@@ -253,38 +255,44 @@ while 1 :
             serialconnect_sensor()
 
     except KeyboardInterrupt:
-        print "\nClosing OSCServer."
-        s.close()
-        print "\nClosing SerialPort."
-        ser_controller.close
-        ser_sensor.close
-        print "Waiting for Server-thread to finish"
-        st.join() ##!!!
-        print "Done"
-        sys.exit
+        break
     except SerialException:
         connect_sensor = 0
-        print "serial exception teensy Controller"
+        print "serial exception teensy sensor"
         time.sleep(1)
+    except ValueError, NameError:
+        print "\nJson Parse Error...Retrying"
 
 
     try:
-        ######SERIAL WRITE CONTROLLER
+        ######SERIAL WRITE TEENSY CONTROLLER
       if connect_controller == 0:
         while(serialconnect_controller() == 0):
           print "teensy Controller connecting"   
           pass
 
-        waitForArduino()
+        #waitForArduino()
         #print "teensy Controller active"
 
-      testData = []
-      testData.append("<drive,127," + str(filteredDrive) + ">")
-      testData.append("<strafe,127," + str(filteredStrafe) + ">")
-      testData.append("<turn,127," + str(filteredTurn) + ">")
+      #if sensor connected we want to use filtered data  
+      if connect_sensor == 1:
+        testData = []
+        testData.append("<drive,127," + str(filteredDrive) + ">")
+        testData.append("<strafe,127," + str(filteredStrafe) + ">")
+        testData.append("<turn,127," + str(filteredTurn) + ">")
 
-      print testData
-      driver = runTest(testData)
+        print testData
+        driver = runTest(testData)
+
+      #if sensors not connected we want to use unfiltered data
+      elif connect_sensor == 0:
+        testData = []
+        testData.append("<drive,127," + str(drive) + ">")
+        testData.append("<strafe,127," + str(strafe) + ">")
+        testData.append("<turn,127," + str(turn) + ">")
+
+        print testData
+        driver = runTest(testData)
         
     except SerialException:
         connect_controller = 0
@@ -292,13 +300,20 @@ while 1 :
         time.sleep(1)
     
     except KeyboardInterrupt:
-        print "\nClosing OSCServer."
-        s.close()
-        print "\nClosing SerialPort."
-        ser_controller.close
-        ser_sensor.close
-        print "Waiting for Server-thread to finish"
-        st.join() ##!!!
-        print "Done"
-        sys.exit
+        break
+
+#if while loop is broken user has exited program so cleanup.
+print "\nClosing OSCServer."
+
+s.close()
+print "Waiting for Server-thread to finish"
+
+st.join() ##!!!
+print "\nClosing SerialPorts."
+
+ser_controller.close
+ser_sensor.close
+print "Done"
+
+sys.exit
 
