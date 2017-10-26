@@ -1,5 +1,8 @@
 #include <Servo.h>
 #include <SoftwareSerial.h> //this is needed for alternate serial pin designations on Teensy 3
+#define TX3_PIN 8
+#define RX3_PIN 7
+SoftwareSerial  SerialPort2(RX3_PIN, TX3_PIN);
 
 Servo myServo;
 byte servoPin = 8;
@@ -24,9 +27,7 @@ boolean newDataFromPC = false;
 char messageFromPC[buffSize] = {0};
 int newFlashInterval = 0;
 float servoFraction = 0.0; // fraction of servo range to move
-#define TX3_PIN 8
-#define RX3_PIN 7
-SoftwareSerial  SerialPort2(RX3_PIN, TX3_PIN);
+
 
 unsigned long curMillis;
 
@@ -36,7 +37,8 @@ unsigned long replyToPCinterval = 1000;
 //=============
 
 void setup() {
-  SerialPort2.begin(9600);
+  SerialPort2.begin(57600);
+  
     // flash LEDs so we know we are alive
   for (byte n = 0; n < numLEDs; n++) {
      pinMode(ledPin[n], OUTPUT);
@@ -54,6 +56,8 @@ void setup() {
   
     // tell the PC we are ready
   SerialPort2.println("<Arduino is ready>");
+
+  Serial.println("message sent");
 }
 
 //=============
@@ -63,7 +67,6 @@ void loop() {
   getDataFromPC();
   updateFlashInterval();
   updateServoPos();
-  replyToPC();
   flashLEDs();
   moveServo();
 }
@@ -121,25 +124,6 @@ void parseData() {
 
 }
 
-//=============
-
-void replyToPC() {
-
-  if (newDataFromPC) {
-    newDataFromPC = false;
-    SerialPort2.print("<Msg ");
-    SerialPort2.print(messageFromPC);
-    SerialPort2.print(" NewFlash ");
-    SerialPort2.print(newFlashInterval);
-    SerialPort2.print(" SrvFrac ");
-    SerialPort2.print(servoFraction);
-    SerialPort2.print(" SrvPos ");
-    SerialPort2.print(newServoPos);
-    SerialPort2.print(" Time ");
-    SerialPort2.print(curMillis >> 9); // divide by 512 is approx = half-seconds
-    SerialPort2.println(">");
-  }
-}
 
 //============
 
