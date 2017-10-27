@@ -1,176 +1,162 @@
-
-""" receiving OSC with pyOSC
-https://trac.v2.nl/wiki/pyOSC
-example by www.ixi-audio.net based on pyOSC documentation
-
-this is a very basic example, for detailed info on pyOSC functionality check the OSC.py file
-or run pydoc pyOSC.py. you can also get the docs by opening a python shell and doing
->>> import OSC
->>> help(OSC)
-"""
-
 import serial
+from serial import SerialException
+
 import json
-
-import OSC
 import time, threading
-
-import os
-
+import datetime
 import decision_engine
-
-##################
-#GLOBAL VARIABLES#
-#   AND SETUP    #
-##################
-
-
-
-#####COMMS VARIABLES
-##
-#### SET DEFAULT ARDUINO DEVICE PATHS
-#port_sensor = "/dev/ttyACM0"
-port_controller = "/dev/ttyAMA0"
-
-##### FOR SETTING A DIFFERENT DEVICE BATH IN ENVIRONMENT VARIABLES
-### In a bash shell use:
-### > export ARDUINO_PATH=$path_to_device
-### In windows power shell useL
-### > set ARDUINO_$_PATH='$path_to_device'
-if "ARDUINO_SENSOR_PATH" in os.environ:
-    port = os.environ["ARDUINO_SENSOR_PATH"]
-if "ARDUINO_CONTROLLER_PATH" in os.environ:
-    port = os.environ["ARDUINO_CONTROLLER_PATH"]
-
-### SET ARDUINO SERIAL BAUDRATE
-baudrate = 9600
-##
-#####END COMMS VARIABLES#####
-
-
-#####SERIAL COMMS SETUP######
-###
-def setup_serial(port, baudrate):
-    ##VARIABLES
-    #port = port
-    #baudrate = baudrate
-    parity=serial.PARITY_NONE
-    stopbits=serial.STOPBITS_ONE
-    bytesize=serial.EIGHTBITS
-    timeout=1
-
-
-    ##RETURN SERIAL
-    ser = serial.Serial(
-        port = port,
-        baudrate = baudrate,
-        parity=parity,
-        stopbits=stopbits,
-        bytesize=bytesize,
-        timeout=1
-        )
-    return ser
-
-#ser_sensor = setup_serial(port_sensor, baudrate)
-ser_controller = setup_serial(port_controller, baudrate)
-###
-#############################
-
-
-
-##########BEGIN MOVEMENT COUNTING########
-
-count_triplet = [0,0,0]
-movement_triplet = [0,0,0]
-last_avg_timestamp = time.time()
-time_delta = .2 ## 200 ms
-
-
-def count_movements(count_triplet, movement_triplet, **kwargs):
-    """
-    The movement_triplet takes the form (drive, strafe, turn)
-    The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
-
-    for every drive, strafe, or turn, event handled, increments the count
-    and addeds to the movement_triplet total movement count
-    """
-    for key, value in kwargs.items():
-        if key == "drive":
-            movement_triplet[0], count_triplet[0] = \
-                movement_triplet[0]+value, count_triplet[0]+1
-        if key == "strafe":
-            movement_triplet[1], count_triplet[1] = \
-                movement_triplet[1]+value, count_triplet[1]+1
-        if key == "turn":
-            movement_triplet[2], count_triplet[2] = \
-                movement_triplet[2]+value, count_triplet[2]+1
-    return count_triplet, movement_triplet
-
-def avg_movement(count_triplet,movement_triplet):
-    """
-    The movement_triplet takes the form (drive, strafe, turn)
-    The count_triplet, takes a similar form (drive_counts, strafe_counts, turn_counts)
-
-    Divides each total movement sum by the total counts of recorded movement messages
-    """
-    #make sure no div by zero
-    if count_triplet[0] <= 0: count_triplet[0]=1
-    if count_triplet[1] <= 0: count_triplet[1]=1
-    if count_triplet[2] <= 0: count_triplet[2]=1
-    # take simple average
-    movement_triplet[0] = movement_triplet[0] / count_triplet[0]
-    movement_triplet[1] = movement_triplet[1] / count_triplet[1]
-    movement_triplet[2] = movement_triplet[2] / count_triplet[2]
-    # checks to make sure values arent greater than abs(value)>=128?
-    # TODO: CHECKS
-
-    return movement_triplet
-
-count_triplet = [0,0,0]
-movement_triplet = [0,0,0]
-last_avg_timestamp = time.time()
-time_delta = .2 ##200 ms
-
-### needed for movement counting & averaging
-
-##
-####END MOVEMENT COUNTING#########################
-
-####OSC COMMS SETUP##########
-###
+import OSC
+import os
+import sys
+import socket, errno
 
 
 ##VARIABLES
-# tupple with ip, port. i dont use the () but maybe you want -> send_address = ('127.0.0.1', 9000)
-# receive_address = '192.168.0.150', 9000
-receive_address = '192.168.1.52', 9000
 
-# OSC Server. there are three different types of server.
-s = OSC.OSCServer(receive_address) # basic
-##s = OSC.ThreadingOSCServer(receive_address) # threading
-##s = OSC.ForkingOSCServer(receive_address) # forking
+drive = 0
+strafe = 0
+turn = 0
 
-# this registers a 'default' handler (for unmatched messages),
-# an /'error' handler, an '/info' handler.
-# And, if the client supports it, a '/subscribe' & '/unsubscribe' handler
-s.addDefaultHandlers()
+filteredDrive = 0
+filteredStrafe = 0
+filteredTurn = 0
 
-# define a message-handler function for the server to call.
-##def printing_handler(addr, tags, stuff, source):
-##    print "---"
-##    print "received new osc msg from %s" % OSC.getUrlStr(source)
-##    print "with addr : %s" % addr
-##    print "typetags %s" % tags
-##    print "data %s" % stuff
-##    print "---"
+startMarker = 60
+endMarker = 62
 
+receive_address = '192.168.1.87', 9000
+
+sensorPort = "/dev/sensor" #plugged directly into USB port on Pi
+controllerPort = "/dev/controller" #plugged directly into USB port on Pi
+baudRate = 115200
+
+ser_controller = None
+ser_sensor = None
+
+connect_sensor = 0
+connect_controller = 0
+
+ip_not_assigned = True
+#=====================================
+
+#  Function Definitions
+
+#=====================================
+
+def sendToArduino(sendStr):
+  global ser
+  ser_controller.write(sendStr)
+
+
+#======================================
+
+def recvFromArduino():
+  global startMarker, endMarker, ser_controller
+  
+  ck = ""
+  x = "z" # any value that is not an end- or startMarker
+  byteCount = -1 # to allow for the fact that the last increment will be one too many
+  
+  # wait for the start character
+  while  ord(x) != startMarker: 
+    x = ser_controller.read()
+  
+  # save data until the end marker is found
+  while ord(x) != endMarker:
+    if ord(x) != startMarker:
+      ck = ck + x 
+      byteCount += 1
+    x = ser_controller.read()
+  
+  return(ck)
+
+
+#============================
+
+def waitForArduino():
+
+   # wait until the Arduino sends 'Arduino Ready' - allows time for Arduino reset
+   # it also ensures that any bytes left over from a previous message are discarded
+   
+    global startMarker, endMarker, connect_controller, ser
+    
+    msg = ""
+    while msg.find("Arduino is ready") == -1:
+      try:
+
+          while ser_controller.inWaiting() == 0:
+            print "ser_controller.inwaiting passed"
+          
+  
+          msg = recvFromArduino()
+
+          print msg
+          print
+          connect_controller = 1
+          
+      except IOError:
+          msg = ""
+          connect_controller = 0 
+          print "ioerror"
+          return
+        
+#======================================
+
+def runTest(td):
+  numLoops = len(td)
+  waitingForReply = False
+
+  n = 0
+  while n < numLoops:
+
+    teststr = td[n]
+
+    if waitingForReply == False:
+      sendToArduino(teststr)
+      #print "Sent from PC -- LOOP NUM " + str(n) + " TEST STR " + teststr
+##      waitingForReply = True
 ##
+##    if waitingForReply == True:
+##
+##      while ser.inWaiting() == 0:
+##        pass
+##        
+      dataRecvd = recvFromArduino()
+      print "Reply Received  " + dataRecvd
+      n += 1
+##      waitingForReply = False
+
+    time.sleep(.01)
+
+
+
+def serialconnect_sensor():
+  global baudrate, ser_sensor, sensorPort, connect_sensor
+  
+  try :
+      ser_sensor = serial.Serial(sensorPort, baudRate)
+      connect_sensor = 1
+
+  except SerialException:
+      print "Could not connect to teensy_sensor"
+      connect_sensor = 0
+
+
+def serialconnect_controller():
+  global baudrate, ser_controller, controllerPort, connect_controller
+  
+  try :
+      ser_controller = serial.Serial(controllerPort, baudRate)
+      connect_controller = 1
+
+  except SerialException:
+      print "Could not connect to teensy_controller"
+      connect_controller = 0
+
+
 def drive_handler(addr, tags, stuff, source):
-    global count_triplet
-    global movement_triplet
-    count_triplet, movement_triplet = \
-            count_movements(count_triplet, movement_triplet,
-                            drive = int(stuff[0]))
+    global drive
+    drive = stuff[0]
     
 ##    print "drive"
 ##    print "addr: %s" % addr
@@ -178,108 +164,165 @@ def drive_handler(addr, tags, stuff, source):
 
 ##
 def strafe_handler(addr, tags, stuff, source):
-    global count_triplet
-    global movement_triplet
-    count_triplet, movement_triplet = \
-            count_movements(count_triplet, movement_triplet,
-                            strafe = int(stuff[0]))
+    global strafe
+    strafe = stuff[0]
+
 
 ##    print "strafe"
 ##    print "addr: %s" % addr
 ##    print "stuff: %s" % stuff
     
 def turn_handler(addr, tags, stuff, source):
-    global count_triplet
-    global movement_triplet
-    count_triplet, movement_triplet = \
-            count_movements(count_triplet, movement_triplet,
-                            turn = int(stuff[0]))
+    global turn
+    turn = stuff[0]
+    
 ##    print "turn"
 ##    print "addr: %s" % addr
 ##    print "stuff: %s" % stuff
+#does nothing but prevents error
 
-def sample_handler():
+def sample_handler(addr, tag, stuff, source):
     h = 1
 
-##s.addMsgHandler("/print", printing_handler) # adding our function
-s.addMsgHandler("/drive", drive_handler)
-s.addMsgHandler("/strafe", strafe_handler)
-s.addMsgHandler("/turn", turn_handler)
-s.addMsgHandler("/_samplerate", sample_handler)
 
+#======================================
 
-# just checking which handlers we have added
-print "Registered Callback-functions are :"
-for addr in s.getOSCAddressSpace():
-    print addr
+# THE PROGRAM STARTS HERE
 
-# Start OSCServer
-print "\nStarting OSCServer. Use ctrl-C to quit."
-st = threading.Thread( target = s.serve_forever )
-st.start()
+#======================================
 
+# OSC Server.
 
+while ip_not_assigned:
+  
+    try:
+        s = OSC.OSCServer(receive_address) # basic
 
-time.sleep(.1)
-###
-########################
+        s.addDefaultHandlers()
 
-#############
-#Begin Loops#
-#############
+        ##s.addMsgHandler("/print", printing_handler) # adding our function
+        s.addMsgHandler("/drive", drive_handler)
+        s.addMsgHandler("/strafe", strafe_handler)
+        s.addMsgHandler("/turn", turn_handler)
+        s.addMsgHandler("/_samplerate", sample_handler)
 
-##Listen over serial
+        # just checking which handlers we have added
+        print "Registered Callback-functions are :"
+        for addr in s.getOSCAddressSpace():
+            print addr
+            
+        # Start OSCServer
+        print "\nStarting OSCServer. Use ctrl-C to quit."
+        st = threading.Thread( target = s.serve_forever )
+        st.start()
 
-while True:
-
-######SERIAL RECEIVE SENSOR -> JSON
-###
-    time.sleep(.005)
-#    data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
-#    j_sensor = json.loads(data)
-###
-#############################
-#    print ser_controller.readline()
-######SERIAL WRITE CONTROLLER
-###
-### Check if the time_delta has elapsed
-    if (time.time() - last_avg_timestamp) > time_delta:
-        movement_triplet = \
-            avg_movement(count_triplet, movement_triplet)
-	print movement_triplet
-        s_movement = {"drive":movement_triplet[0],
-                      "strafe":movement_triplet[1],
-                      "turn":movement_triplet[2]}
-        j_movement = json.dumps(s_movement)
-	print s_movement
-
-        ##SERIAL SEND CONTROLLER
-       # j_movement = decision_engine.sensor_filter(j_sensor,j_osc)
-
-        #ser_controller..write(j_movement)
-
-        ##Reset Counts
-        count_triplet = [0,0,0]
-        movement_triplet = [0,0,0]
+        time.sleep(1)
         
-        ##Reset Time Stamp
-        last_avg_timestamp = time.time()
-
-###
-###############################
-
-
+        ip_not_assigned = False
+        
+    except socket.error, NameError:
+        print "Socket error - cannot assign server programmed ip address"
+        
 
 
-try :
-    while 1 :
-        time.sleep(5)
 
-except KeyboardInterrupt :
-    print "\nClosing OSCServer."
-    s.close()
-    print "Waiting for Server-thread to finish"
-    st.join() ##!!!
-    print "Done"
 
+while 1 :
+
+    try:
+        if connect_sensor == 1:
+
+          ######SERIAL RECEIVE SENSOR -> JSON
+          data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
+
+
+          j_sensor = json.loads(data)
+  
+
+          print j_sensor
+          #print datetime.datetime.now()
+
+          #filter thru decision engine
+
+          #make dictionary with current osc values
+          j_osc = {"drive":drive, "strafe": strafe, "turn": turn}
+
+          print j_osc
+          
+          #filter
+          filteredmovement = decision_engine.sensor_filter(j_sensor, j_osc)
+
+          #bind to new variables, this could be skipped
+          filteredDrive = filteredmovement["drive"] 
+
+          filteredStrafe = filteredmovement["strafe"] 
+
+          filteredTurn = filteredmovement["turn"] 
+
+
+        else:
+            serialconnect_sensor()
+
+    except KeyboardInterrupt:
+        break
+    except SerialException:
+        connect_sensor = 0
+        print "serial exception teensy sensor"
+        time.sleep(1)
+    except ValueError, NameError:
+        print "\nJson Parse Error...Retrying"
+
+
+    try:
+        ######SERIAL WRITE TEENSY CONTROLLER
+      if connect_controller == 0:
+        while(serialconnect_controller() == 0):
+          print "teensy Controller connecting"   
+          pass
+
+        #waitForArduino()
+        #print "teensy Controller active"
+
+      #if sensor connected we want to use filtered data  
+      if connect_sensor == 1 and connect_controller == 1:
+        testData = []
+        testData.append("<drive,127," + str(filteredDrive) + ">")
+        testData.append("<strafe,127," + str(filteredStrafe) + ">")
+        testData.append("<turn,127," + str(filteredTurn) + ">")
+
+        print testData
+        driver = runTest(testData)
+
+      #if sensors not connected we want to use unfiltered data
+      elif connect_sensor == 0 and connect_controller == 1:
+        testData = []
+        testData.append("<drive,127," + str(drive) + ">")
+        testData.append("<strafe,127," + str(strafe) + ">")
+        testData.append("<turn,127," + str(turn) + ">")
+
+        print testData
+        driver = runTest(testData)
+        
+    except SerialException:
+        connect_controller = 0
+        print "serial exception teensy Controller"
+        time.sleep(1)
+    
+    except KeyboardInterrupt:
+        break
+
+#if while loop is broken user has exited program so cleanup.
+print "\nClosing OSCServer."
+
+s.close()
+print "Waiting for Server-thread to finish"
+
+st.join() ##!!!
+print "\nClosing SerialPorts."
+
+ser_controller.close
+ser_sensor.close
+print "Done"
+
+sys.exit
 
