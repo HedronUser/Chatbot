@@ -1,0 +1,35 @@
+Network documentation
+ 
+run ifconfig
+
+wlan0:
+        inet 192.168.1.52  netmask 255.255.255.0  broadcast 192.168.1.255
+
+run netstat -nr
+
+Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG        0 0          0 wlan0
+192.168.1.0     0.0.0.0         255.255.255.0   U         0 0          0 wlan
+
+mac   e
+address 
+
+b8:27:eb:b0:bb:3a 
+
+
+run sudo nano /etc/network/interfaces
+
+added the below information to /etc/dhcpcd.conf
+
+# Example static IP configuration:
+interface eth0
+static ip_address=192.168.1.52/24
+static routers=192.168.1.1
+static domain_name_servers=192.168.1.1 8.8.8.8
+
+interface wlan0
+static ip_address=192.168.1.52/24
+static routers=192.168.1.1
+static domain_name_servers=192.168.1.1 8.8.8.8
+
+
