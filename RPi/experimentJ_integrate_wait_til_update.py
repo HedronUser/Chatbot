@@ -122,7 +122,7 @@ def runTest(td):
 ##        pass
 ##        
       dataRecvd = recvFromArduino()
-      print "Reply Received  " + dataRecvd
+      
       n += 1
 ##      waitingForReply = False
 
@@ -239,16 +239,16 @@ while 1 :
           j_sensor = json.loads(data)
   
 
+          
           print j_sensor
-          #print datetime.datetime.now()
+	  #print datetime.datetime.now()
 
           #filter thru decision engine
 
           #make dictionary with current osc values
           j_osc = {"drive":drive, "strafe": strafe, "turn": turn}
 
-          print j_osc
-          
+                    
           #filter
           filteredmovement = decision_engine.sensor_filter(j_sensor, j_osc)
 
@@ -290,7 +290,6 @@ while 1 :
         testData.append("<strafe,127," + str(filteredStrafe) + ">")
         testData.append("<turn,127," + str(filteredTurn) + ">")
 
-        print testData
         driver = runTest(testData)
 
       #if sensors not connected we want to use unfiltered data

@@ -28,7 +28,7 @@ def sensor_filter(j_sensor, j_osc):
     ##TODO: incorportate "potval" and "toe" timeouterror in channel_data
     #potval = j_sensor["potval"]
 
-    threshold = 200
+    threshold = 500
     
     #filter small distance values( which are glitches at large distance)
     for i in range(24):
@@ -48,7 +48,7 @@ def sensor_filter(j_sensor, j_osc):
 
     
 
-    print j_sensor 
+     
     #for i in range(25):
     #    if j_sesnor["channel"] == "toe":
     #        pass #figure out what to do with data
@@ -76,8 +76,10 @@ def sensor_filter(j_sensor, j_osc):
         strafe = 0
     j_osc["strafe"] = strafe
 
+    turn = j_osc["turn"]
     if any_obs > 0:
         turn = 0
-    turn = j_osc["turn"] # 127 -> rotate clock-wise, -127 rotate counter-clock-wise
+	
+    j_osc["turn"] = turn # 127 -> rotate clock-wise, -127 rotate counter-clock-wise
 
     return j_osc
