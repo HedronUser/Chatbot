@@ -12,12 +12,12 @@ def sensor_filter(j_sensor, j_osc):
 
     LEFT<->RIGHT
         TOP
-       0 -> 5
+       0 -> 6
     23|------|6
      ^|      ||
      ||      |v
-    18|______|11
-       17<-12
+    18|______|12
+       18<-12
         BOTTOM
 
     ##Plain English Algo##
@@ -28,12 +28,12 @@ def sensor_filter(j_sensor, j_osc):
     ##TODO: incorportate "potval" and "toe" timeouterror in channel_data
     #potval = j_sensor["potval"]
 
-    threshold = 500
+    threshold = 400
     
     #filter small distance values( which are glitches at large distance)
     for i in range(24):
-        if j_sensor["channel_data"][i] < 10:
-            j_sensor["channel_data"][i] = 8190
+        if j_sensor["channel_data"][i] < 100:
+            j_sensor["channel_data"][i] = 8192
 
 
     for j in range(24):
@@ -57,9 +57,9 @@ def sensor_filter(j_sensor, j_osc):
     ##We sum over the sensor values to find if any sensor has
     ##been tripped. Positive non-zero number means obstacle.
     top_obs = sum(j_sensor["channel_data"][0:5])
-    right_obs = sum(j_sensor["channel_data"][6:11])
-    bottom_obs = sum(j_sensor["channel_data"][12:17])
-    left_obs = sum(j_sensor["channel_data"][18:23])
+    right_obs = sum(j_sensor["channel_data"][7:12])
+    bottom_obs = sum(j_sensor["channel_data"][12:15]) + sum(j_sensor["channel_data"][17:18])
+    left_obs = sum(j_sensor["channel_data"][18:20])
     any_obs = top_obs + right_obs + bottom_obs + left_obs
 
     drive = j_osc["drive"] # 127 -> drive forward, -127 -> drive reverse

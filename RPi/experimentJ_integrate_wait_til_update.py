@@ -287,8 +287,8 @@ while 1 :
       if connect_sensor == 1 and connect_controller == 1:
         testData = []
         testData.append("<drive,127," + str(filteredDrive) + ">")
-        testData.append("<strafe,127," + str(filteredStrafe) + ">")
-        testData.append("<turn,127," + str(filteredTurn) + ">")
+        testData.append("<turn,127," + str(filteredStrafe) + ">")
+        testData.append("<strafe,127," + str(filteredTurn) + ">")
 
         driver = runTest(testData)
 
@@ -296,8 +296,8 @@ while 1 :
       elif connect_sensor == 0 and connect_controller == 1:
         testData = []
         testData.append("<drive,127," + str(drive) + ">")
-        testData.append("<strafe,127," + str(strafe) + ">")
-        testData.append("<turn,127," + str(turn) + ">")
+        testData.append("<turn,127," + str(strafe) + ">")
+        testData.append("<strafe,127," + str(turn) + ">")
 
         print testData
         driver = runTest(testData)
