@@ -225,40 +225,42 @@ while ip_not_assigned:
         
 
 
-
+prevTime = 0
+interval = 20
 
 while 1 :
 
     try:
         if connect_sensor == 1:
+	  millis = lambda: int(round(time.time()*1000))
+ 	  if millis() - prevTime > interval:
+         ######SERIAL RECEIVE SENSOR -> JSON
+            data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
 
-          ######SERIAL RECEIVE SENSOR -> JSON
-          data = ser_sensor.readline().strip().decode('utf8')#reads, strips carriage returns, and decodes to utf8 
 
-
-          j_sensor = json.loads(data)
+            j_sensor = json.loads(data)
   
 
           
-          print j_sensor
+            print j_sensor
 	  #print datetime.datetime.now()
 
           #filter thru decision engine
 
           #make dictionary with current osc values
-          j_osc = {"drive":drive, "strafe": strafe, "turn": turn}
+            j_osc = {"drive":drive, "strafe": strafe, "turn": turn}
 
                     
           #filter
-          filteredmovement = decision_engine.sensor_filter(j_sensor, j_osc)
+            filteredmovement = decision_engine.sensor_filter(j_sensor, j_osc)
 
           #bind to new variables, this could be skipped
-          filteredDrive = filteredmovement["drive"] 
+            filteredDrive = filteredmovement["drive"] 
 
-          filteredStrafe = filteredmovement["strafe"] 
+            filteredStrafe = filteredmovement["strafe"] 
 
-          filteredTurn = filteredmovement["turn"] 
-
+            filteredTurn = filteredmovement["turn"] 
+	    prevTime = millis()
 
         else:
             serialconnect_sensor()
