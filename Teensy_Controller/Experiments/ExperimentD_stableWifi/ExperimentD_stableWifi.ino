@@ -116,7 +116,11 @@ unsigned long replyToPCinterval = 100; // 100ms command interval
 
 
 void setup() {
+<<<<<<< HEAD:Teensy_Controller/Experiments/ExperimentD_stableWifi/ExperimentD_stableWifi.ino
   Serial.begin(115200); //comms to pi
+=======
+  Serial.begin(9600); //comms to pi
+>>>>>>> dedcea192b70ea6c4918c6d7c99eefbcc2534334:Teensy_Controller/ExperimentD/ExperimentD.ino
   SerialPort1.begin(115200);   // . // //temporarily ganged both drivers for debugging purposes. 
   SerialPort2.begin(115200);   // going to hook back up to the motor drivers
     // flash LEDs so we know we are alive
@@ -228,7 +232,10 @@ void commandMotors(float driveVal, float turnVal, float strafeVal){
     KF2.s(mappedmotorFR); //motor '2'   
     KR1.s(mappedmotorRL); //motor '3'
     KR2.s(mappedmotorRR); //motor '4'
+<<<<<<< HEAD:Teensy_Controller/Experiments/ExperimentD_stableWifi/ExperimentD_stableWifi.ino
 
+=======
+>>>>>>> dedcea192b70ea6c4918c6d7c99eefbcc2534334:Teensy_Controller/ExperimentD/ExperimentD.ino
 }
 
 //=============
