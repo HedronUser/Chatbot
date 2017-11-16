@@ -226,8 +226,7 @@ while ip_not_assigned:
 
 
 prevTime = 0
-interval = 20
-
+interval = 10
 while 1 :
 
     try:

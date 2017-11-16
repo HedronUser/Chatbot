@@ -74,19 +74,15 @@ def sensor_filter(j_sensor, j_osc):
     turn = j_osc["turn"]
     if top_obs > 0 and drive > 0:
         drive = 0
-	strafe = 0
     if bottom_obs > 0 and drive < 0:
         drive = 0
-	strafe = 0
     #j_osc["drive"] = drive
 
     #strafe = j_osc["strafe"] # 127 -> stafe right, -127 -> strafe left
     if right_obs > 0 and strafe > 0:
         strafe = 0
-	drive = 0
     if left_obs > 0 and strafe < 0:
         strafe = 0
-        drive = 0
     #j_osc["strafe"] = strafe
 
     #turn = j_osc["turn"]
